@@ -6,20 +6,34 @@
 
 // ---- DB Credentials: sửa cho khớp với phpMyAdmin ----
 // Bạn đang dùng database tên "doan" với user root (XAMPP mặc định)
-if (!defined('DB_HOST')) define('DB_HOST', getenv('DB_HOST') ?: 'localhost');
-if (!defined('DB_PORT')) define('DB_PORT', getenv('DB_PORT') ?: '3306');
-if (!defined('DB_NAME')) define('DB_NAME', getenv('DB_NAME') ?: 'doan');
-if (!defined('DB_USER')) define('DB_USER', getenv('DB_USER') ?: 'root');
-if (!defined('DB_PASS')) define('DB_PASS', getenv('DB_PASS') ?: '');
-if (!defined('DB_CHARSET')) define('DB_CHARSET', 'utf8mb4');
+if (!defined('DB_HOST'))
+    define('DB_HOST', getenv('DB_HOST') ?: 'localhost');
+if (!defined('DB_PORT'))
+    define('DB_PORT', getenv('DB_PORT') ?: '3306');
+if (!defined('DB_NAME'))
+    define('DB_NAME', getenv('DB_NAME') ?: 'doan');
+if (!defined('DB_USER'))
+    define('DB_USER', getenv('DB_USER') ?: 'root');
+if (!defined('DB_PASS'))
+    define('DB_PASS', getenv('DB_PASS') ?: '');
+if (!defined('DB_CHARSET'))
+    define('DB_CHARSET', 'utf8mb4');
 
 // Production: Tắt hiển thị lỗi để tránh lộ thông tin và làm vỡ JSON
 // Development: Nếu cần debug có thể tạm thời comment 2 dòng dưới
 error_reporting(0);
 ini_set('display_errors', 0);
 
-// CORS Headers được xử lý bởi .htaccess
-// Chỉ set Content-Type ở đây
+// CORS Configuration
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
+
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit();
+}
+
 if (!headers_sent()) {
     header('Content-Type: application/json; charset=UTF-8');
 }
@@ -30,11 +44,13 @@ date_default_timezone_set('Asia/Ho_Chi_Minh');
 /**
  * Database Connection Class
  */
-class Database {
+class Database
+{
     private static $instance = null;
     private $conn;
-    
-    private function __construct() {
+
+    private function __construct()
+    {
         try {
             // Thêm port vào DSN để kết nối đúng tới MySQL port 3306
             $dsn = "mysql:host=" . DB_HOST . ";port=" . DB_PORT . ";dbname=" . DB_NAME . ";charset=" . DB_CHARSET;
@@ -43,7 +59,7 @@ class Database {
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                 PDO::ATTR_EMULATE_PREPARES => false,
             ];
-            
+
             $this->conn = new PDO($dsn, DB_USER, DB_PASS, $options);
         } catch (PDOException $e) {
             http_response_code(500);
@@ -54,15 +70,17 @@ class Database {
             exit();
         }
     }
-    
-    public static function getInstance() {
+
+    public static function getInstance()
+    {
         if (self::$instance === null) {
             self::$instance = new self();
         }
         return self::$instance;
     }
-    
-    public function getConnection() {
+
+    public function getConnection()
+    {
         return $this->conn;
     }
 }
@@ -70,34 +88,38 @@ class Database {
 /**
  * Response Helper Functions
  */
-function sendResponse($success, $data = null, $error = null, $statusCode = 200) {
+function sendResponse($success, $data = null, $error = null, $statusCode = 200)
+{
     http_response_code($statusCode);
     $response = ['success' => $success];
-    
+
     if ($data !== null) {
         $response['data'] = $data;
     }
-    
+
     if ($error !== null) {
         $response['error'] = $error;
     }
-    
+
     echo json_encode($response, JSON_UNESCAPED_UNICODE);
     exit();
 }
 
-function sendError($message, $statusCode = 400) {
+function sendError($message, $statusCode = 400)
+{
     sendResponse(false, null, $message, $statusCode);
 }
 
-function sendSuccess($data, $statusCode = 200) {
+function sendSuccess($data, $statusCode = 200)
+{
     sendResponse(true, $data, null, $statusCode);
 }
 
 /**
  * Get JSON input
  */
-function getJsonInput() {
+function getJsonInput()
+{
     $json = file_get_contents('php://input');
     return json_decode($json, true);
 }
@@ -106,47 +128,50 @@ function getJsonInput() {
  * Verify JWT Token (Simple implementation)
  * TODO: Implement proper JWT verification
  */
-function verifyToken($token) {
+function verifyToken($token)
+{
     // Simple token verification - in production use JWT library
     if (empty($token)) {
         return null;
     }
-    
+
     // Decode token (simple base64 for demo)
     $decoded = json_decode(base64_decode($token), true);
-    
+
     if (!$decoded || !isset($decoded['user_id'])) {
         return null;
     }
-    
+
     // Verify user exists and is active
     $db = Database::getInstance()->getConnection();
     $stmt = $db->prepare("SELECT user_id, username, email, role FROM users WHERE user_id = ? AND is_active = 1");
     $stmt->execute([$decoded['user_id']]);
     $user = $stmt->fetch();
-    
+
     return $user ?: null;
 }
 
 /**
  * Get current user from Authorization header
  */
-function getCurrentUser() {
+function getCurrentUser()
+{
     $headers = getallheaders();
     $token = $headers['Authorization'] ?? $_SERVER['HTTP_AUTHORIZATION'] ?? null;
-    
+
     if ($token) {
         $token = str_replace('Bearer ', '', $token);
         return verifyToken($token);
     }
-    
+
     return null;
 }
 
 /**
  * Require authentication
  */
-function requireAuth() {
+function requireAuth()
+{
     $user = getCurrentUser();
     if (!$user) {
         sendError('Unauthorized', 401);
@@ -157,7 +182,8 @@ function requireAuth() {
 /**
  * Require admin role
  */
-function requireAdmin() {
+function requireAdmin()
+{
     $user = requireAuth();
     if ($user['role'] !== 'admin') {
         sendError('Forbidden: Admin access required', 403);
@@ -168,7 +194,8 @@ function requireAdmin() {
 /**
  * Sanitize input
  */
-function sanitize($data) {
+function sanitize($data)
+{
     if (is_array($data)) {
         return array_map('sanitize', $data);
     }
