@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import L from 'leaflet';
 import { DistrictData } from '../types';
-import { Filter, Layers, MapPin, XCircle } from 'lucide-react';
+import { Filter, Layers, MapPin, XCircle, Settings } from 'lucide-react';
 
 interface SpatialMapProps {
     data: DistrictData[];
@@ -13,6 +13,9 @@ const SpatialMap: React.FC<SpatialMapProps> = ({ data }) => {
     const markersRef = useRef<L.LayerGroup | null>(null);
     const userLocationLayerRef = useRef<L.LayerGroup | null>(null); // Layer for user's real-time location
     const tileLayerRef = useRef<L.TileLayer | null>(null);
+
+    // Mobile UI State
+    const [showMobileControls, setShowMobileControls] = useState(false);
 
     // Tracking State
     const [isTracking, setIsTracking] = useState(true); // Start tracking by default
@@ -302,34 +305,51 @@ const SpatialMap: React.FC<SpatialMapProps> = ({ data }) => {
 
     return (
         <div className="p-0 h-full flex flex-col relative animate-fade-in">
-            {/* Title Overlay */}
-            <div className="absolute top-4 left-4 lg:left-14 z-[400] bg-white/90 backdrop-blur-md p-4 rounded-2xl shadow-2xl border border-slate-200 max-w-xs pointer-events-none">
+            {/* Title Overlay - Compact on Mobile */}
+            <div className="absolute top-4 left-4 lg:left-14 z-[400] bg-white/90 backdrop-blur-md p-3 lg:p-4 rounded-2xl shadow-2xl border border-slate-200 pointer-events-none transition-all max-w-[calc(100vw-80px)] lg:max-w-xs">
                 <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
+                    <div className="p-2 bg-blue-100 text-blue-600 rounded-lg shrink-0">
                         <Layers size={20} />
                     </div>
-                    <div>
-                        <h1 className="text-lg font-bold text-slate-800 leading-tight">Bản Đồ Giao Thông</h1>
-                        <p className="text-xs text-slate-500 font-medium">Hiển thị AQI theo quy mô & vị trí</p>
+                    <div className="overflow-hidden">
+                        <h1 className="text-sm lg:text-lg font-bold text-slate-800 leading-tight truncate">Bản Đồ Giao Thông</h1>
+                        <p className="text-[10px] lg:text-xs text-slate-500 font-medium truncate">AQI theo quy mô & vị trí</p>
                     </div>
                 </div>
             </div>
 
-            {/* RIGHT SIDE CONTROL PANEL */}
-            <div className="absolute top-4 right-4 z-[400] flex flex-col items-end gap-2">
+            {/* MOBILE TOGGLE BUTTON (Visible only on mobile/tablet) */}
+            <button
+                onClick={() => setShowMobileControls(!showMobileControls)}
+                className="lg:hidden absolute top-4 right-4 z-[401] bg-white p-3 rounded-full shadow-xl border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors"
+                aria-label="Toggle Controls"
+            >
+                {showMobileControls ? <XCircle size={24} /> : <Settings size={24} />}
+            </button>
+
+            {/* CONTROL PANEL */}
+            {/* On Mobile: Absolute, full screen or large dropdown, toggled by state */}
+            {/* On Desktop: Absolute top-right, always visible */}
+            <div className={`
+                absolute z-[400] flex flex-col gap-2 transition-all duration-300 ease-in-out
+                lg:top-4 lg:right-4 lg:items-end lg:w-auto lg:h-auto lg:visible lg:opacity-100 lg:translate-y-0
+                ${showMobileControls
+                    ? 'top-20 right-4 left-4 visible opacity-100 translate-y-0'
+                    : 'top-20 right-4 left-4 invisible opacity-0 -translate-y-4 lg:visible lg:opacity-100 lg:translate-y-0 lg:left-auto'}
+            `}>
 
                 {/* 1. Map Style Selector Pattern */}
-                <div className="bg-white/90 backdrop-blur-md p-3 rounded-2xl shadow-xl border border-slate-200">
+                <div className="bg-white/95 backdrop-blur-md p-3 rounded-2xl shadow-xl border border-slate-200 animate-slide-in">
                     <div className="flex items-center gap-2 mb-3 px-1">
                         <Layers size={16} className="text-slate-500" />
                         <span className="text-xs font-bold text-slate-700 uppercase">Loại bản đồ</span>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 justify-between lg:justify-end">
                         {(Object.keys(mapStyles) as Array<keyof typeof mapStyles>).map((style) => (
                             <button
                                 key={style}
                                 onClick={() => setMapStyle(style)}
-                                className={`flex flex-col items-center gap-1 p-2 rounded-xl border transition-all w-16
+                                className={`flex flex-col items-center gap-1 p-2 rounded-xl border transition-all flex-1 lg:flex-none lg:w-16
                                     ${mapStyle === style
                                         ? 'bg-slate-100 border-blue-500 shadow-inner'
                                         : 'border-transparent hover:bg-slate-50'
@@ -343,12 +363,12 @@ const SpatialMap: React.FC<SpatialMapProps> = ({ data }) => {
                 </div>
 
                 {/* 2. Filter Control */}
-                <div className="bg-white/90 backdrop-blur-md p-3 rounded-2xl shadow-xl border border-slate-200">
+                <div className="bg-white/95 backdrop-blur-md p-3 rounded-2xl shadow-xl border border-slate-200 animate-slide-in" style={{ animationDelay: '0.1s' }}>
                     <div className="flex items-center gap-2 mb-3 px-1">
                         <Filter size={16} className="text-slate-500" />
                         <span className="text-xs font-bold text-slate-700 uppercase">Bộ lọc AQI</span>
                     </div>
-                    <div className="flex flex-col gap-1.5 min-w-[140px]">
+                    <div className="grid grid-cols-2 lg:flex lg:flex-col gap-1.5 min-w-[140px]">
                         {filters.map(f => (
                             <button
                                 key={f.id}
@@ -359,9 +379,9 @@ const SpatialMap: React.FC<SpatialMapProps> = ({ data }) => {
                                         : 'bg-white text-slate-600 border-slate-100 hover:bg-slate-50'
                                     }`}
                             >
-                                <span>{f.label}</span>
+                                <span>{f.label.split('(')[0]}</span>
                                 {f.id !== 'all' && (
-                                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: f.color }}></span>
+                                    <span className="w-2.5 h-2.5 rounded-full shrink-0 ml-2" style={{ backgroundColor: f.color }}></span>
                                 )}
                             </button>
                         ))}
@@ -369,7 +389,7 @@ const SpatialMap: React.FC<SpatialMapProps> = ({ data }) => {
                 </div>
 
                 {/* 3. Real-time Location Tracking */}
-                <div className="bg-white/90 backdrop-blur-md p-3 rounded-2xl shadow-xl border border-slate-200 w-full max-w-[250px] pointer-events-auto">
+                <div className="bg-white/95 backdrop-blur-md p-3 rounded-2xl shadow-xl border border-slate-200 w-full lg:max-w-[250px] pointer-events-auto animate-slide-in" style={{ animationDelay: '0.2s' }}>
                     <button
                         onClick={isTracking ? stopTracking : startTracking}
                         className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all border
@@ -388,7 +408,7 @@ const SpatialMap: React.FC<SpatialMapProps> = ({ data }) => {
                     )}
                 </div>
 
-                <div className="bg-white/90 backdrop-blur-md px-4 py-2 rounded-full shadow-lg border border-slate-200 text-xs font-bold text-slate-600">
+                <div className="bg-white/90 backdrop-blur-md px-4 py-2 rounded-full shadow-lg border border-slate-200 text-xs font-bold text-slate-600 self-end lg:self-auto">
                     {filteredData.length} điểm quan trắc
                 </div>
             </div>
@@ -425,6 +445,14 @@ const SpatialMap: React.FC<SpatialMapProps> = ({ data }) => {
                     .custom-aqi-marker-container:hover > div > div:first-child {
                         transform: scale(1.15);
                         box-shadow: 0 8px 25px rgba(0,0,0,0.4);
+                    }
+
+                    @keyframes slide-in {
+                        from { opacity: 0; transform: translateY(-10px); }
+                        to { opacity: 1; transform: translateY(0); }
+                    }
+                    .animate-slide-in {
+                        animation: slide-in 0.3s ease-out forwards;
                     }
                 `}
             </style>
