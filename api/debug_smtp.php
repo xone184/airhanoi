@@ -25,12 +25,12 @@ foreach ($targets as $host => $ports) {
         $time = round((microtime(true) - $start) * 1000);
 
         if ($fp) {
-            echo "✅ OPEN (${time}ms)\n";
+            echo "✅ OPEN ({$time}ms)\n";
             fwrite($fp, "EHLO AirHanoiTest\r\n");
             echo "    Response: " . trim(fgets($fp)) . "\n";
             fclose($fp);
         } else {
-            echo "❌ TIMEOUT/CLOSED (Error: $errstr) (${time}ms)\n";
+            echo "❌ TIMEOUT/CLOSED (Error: $errstr) ({$time}ms)\n";
         }
     }
 }
