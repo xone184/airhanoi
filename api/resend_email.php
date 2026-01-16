@@ -133,16 +133,25 @@ function sendEmailViaPHPMailer($to, $subject, $htmlBody)
 {
     $mail = new PHPMailer(true);
 
+
+    // Server settings
+    // Capture SMTP Debug Output
+    $mail->SMTPDebug = 2; // Logic: 0 = off, 1 = client messages, 2 = client and server messages
+    $mail->Debugoutput = function ($str, $level) {
+        $GLOBALS['smtp_debug'] .= "$level: $str\n";
+    };
+    $GLOBALS['smtp_debug'] = "";
+
     try {
         // Server settings
-// $mail->SMTPDebug = SMTP::DEBUG_SERVER; // Enable verbose debug output
         $mail->isSMTP();
-        // Force IPv4
+        // Force IPv4 Resolution
         $mail->Host = gethostbyname('smtp.gmail.com');
         $mail->SMTPAuth = true;
         $mail->Username = MAIL_USER;
         $mail->Password = MAIL_PASS;
-        // Revert to 587/STARTTLS with IPv4 fix
+
+        // Standard STARTTLS settings
         $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
         $mail->Port = 587;
 
@@ -169,7 +178,9 @@ function sendEmailViaPHPMailer($to, $subject, $htmlBody)
         return ['success' => true];
 
     } catch (Exception $e) {
-        return ['success' => false, 'error' => "Mailer Error: {$mail->ErrorInfo}"];
+        // Append Debug Log to error message
+        $debugLog = $GLOBALS['smtp_debug'] ?? 'No debug info';
+        return ['success' => false, 'error' => "Mailer Error: {$mail->ErrorInfo}. Debug: $debugLog"];
     } catch (\Throwable $e) {
         return ['success' => false, 'error' => "System Error: " . $e->getMessage()];
     }
@@ -349,7 +360,7 @@ function generateAlertEmailHtml(
                         <div
                             style='max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);'>
                             <!-- Header -->
-                            <div style='background: {$severity[' color']}; padding: 24px; text-align: center;'>
+                            <div style='background: {$severity['color']}; padding: 24px; text-align: center;'>
                                 <h1 style='color: #ffffff; margin: 0; font-size: 24px;'>{$severity['icon']} AirHanoi
                                     Alert</h1>
                             </div>
@@ -365,11 +376,11 @@ function generateAlertEmailHtml(
                                 </p>
 
                                 <!-- AQI Box -->
-                                <div style='background: {$severity[' bgColor']}; border: 2px solid {$severity['color']};
+                                <div style='background: {$severity['bgColor']}; border: 2px solid {$severity['color']};
                                     border-radius: 12px; padding: 24px; text-align: center; margin-bottom: 24px;'>
-                                    <p style='font-size: 48px; font-weight: bold; color: {$severity[' color']}; margin:
+                                    <p style='font-size: 48px; font-weight: bold; color: {$severity['color']}; margin:
                                         0; line-height: 1;'>AQI: $aqi</p>
-                                    <p style='font-size: 20px; font-weight: 600; color: {$severity[' color']}; margin:
+                                    <p style='font-size: 20px; font-weight: 600; color: {$severity['color']}; margin:
                                         8px 0 0 0;'>{$severity['label']}</p>
                                     <p style='font-size: 14px; color: #6b7280; margin: 12px 0 0 0;'>Ngưỡng đăng ký của
                                         bạn: $threshold</p>
