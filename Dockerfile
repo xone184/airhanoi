@@ -13,6 +13,10 @@ RUN sed -i 's/AllowOverride None/AllowOverride All/' /etc/apache2/apache2.conf
 # Copy toàn bộ source code vào image
 COPY . /var/www/html/
 
+# Copy custom Apache config
+COPY 000-default.conf /etc/apache2/sites-available/000-default.conf
+
+
 # Thiết lập quyền cho thư mục uploads (nếu có)
 RUN chown -R www-data:www-data /var/www/html/uploads \
     && chmod -R 755 /var/www/html/uploads
