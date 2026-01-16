@@ -2,9 +2,9 @@
 /**
  * PHPMailer Email API
  * Sử dụng PHPMailer với Gmail SMTP để gửi email
- * 
+ *
  * Endpoints:
- *   POST /api/resend_email.php - Gửi email qua Gmail SMTP
+ * POST /api/resend_email.php - Gửi email qua Gmail SMTP
  */
 
 use PHPMailer\PHPMailer\PHPMailer;
@@ -135,7 +135,7 @@ function sendEmailViaPHPMailer($to, $subject, $htmlBody)
 
     try {
         // Server settings
-        // $mail->SMTPDebug = SMTP::DEBUG_SERVER; // Enable verbose debug output
+// $mail->SMTPDebug = SMTP::DEBUG_SERVER; // Enable verbose debug output
         $mail->isSMTP();
         $mail->Host = 'smtp.gmail.com';
         $mail->SMTPAuth = true;
@@ -180,15 +180,19 @@ function getAlertSubject($aqi, $district)
         return "🔴 Cảnh báo cao: AQI $aqi - Mức xấu tại $district";
     }
     return "🚨 KHẨN CẤP: AQI $aqi - Nguy hại cho sức khỏe tại $district";
-}
-
-/**
- * Get AQI severity info
- */
-function getAqiSeverity($aqi)
-{
+} /** * Get AQI severity info */
+function
+    getAqiSeverity(
+    $aqi
+) {
     if ($aqi <= 100)
-        return ['label' => 'Tốt', 'color' => '#10B981', 'bgColor' => '#D1FAE5', 'icon' => '✅'];
+        return [
+            'label' => 'Tốt',
+            'color' => '#10B981',
+            'bgColor' => '#D1FAE5',
+            'icon'
+            => '✅'
+        ];
     if ($aqi <= 150)
         return ['label' => 'Trung bình', 'color' => '#F59E0B', 'bgColor' => '#FEF3C7', 'icon' => '⚠️'];
     if ($aqi <= 200)
@@ -205,39 +209,44 @@ function getHealthRecommendations($aqi)
 {
     if ($aqi <= 150) {
         return [
-            'Hạn chế hoạt động ngoài trời kéo dài',
+            'Hạn chế hoạt động ngoài trời kéo dài'
+            ,
             'Người nhạy cảm nên theo dõi sức khỏe',
         ];
     }
     if ($aqi <= 200) {
-        return [
-            'Hạn chế hoạt động thể chất ngoài trời',
-            'Đeo khẩu trang khi ra ngoài',
-            'Đóng cửa sổ trong nhà',
-        ];
+        return
+            [
+                'Hạn chế hoạt động thể chất ngoài trời',
+                'Đeo khẩu trang khi ra ngoài',
+                'Đóng cửa sổ trong nhà'
+                ,
+            ];
     }
     if ($aqi <= 300) {
         return [
             'Tránh mọi hoạt động ngoài trời',
-            'Sử dụng khẩu trang N95/KN95',
-            'Bật máy lọc không khí trong nhà',
+            'Sử dụng khẩu trang N95/KN95'
+            ,
+            'Bật máy lọc không khí trong nhà'
+            ,
             'Người già, trẻ em, người có bệnh hô hấp cần đặc biệt cẩn thận',
         ];
     }
-    return [
-        '🚨 KHẨN CẤP: Ở trong nhà, đóng kín cửa',
-        'Sử dụng khẩu trang N95/KN95 nếu phải ra ngoài',
-        'Bật máy lọc không khí ở mức tối đa',
-        'Tránh mọi hoạt động thể chất',
-        'Liên hệ bác sĩ nếu có triệu chứng khó thở',
-    ];
-}
-
-/**
- * Generate test email HTML
- */
-function generateTestEmailHtml()
-{
+    return
+        [
+            '🚨 KHẨN CẤP: Ở trong nhà, đóng kín cửa',
+            'Sử dụng khẩu trang N95/KN95 nếu phải ra ngoài'
+            ,
+            'Bật máy lọc không khí ở mức tối đa',
+            'Tránh mọi hoạt động thể chất'
+            ,
+            'Liên hệ bác sĩ nếu có triệu chứng khó thở',
+        ];
+} /** * Generate test email HTML */
+function
+    generateTestEmailHtml(
+) {
     return '
     <!DOCTYPE html>
     <html>
@@ -245,118 +254,150 @@ function generateTestEmailHtml()
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
     </head>
-    <body style="font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif; background-color: #f6f9fc; margin: 0; padding: 20px;">
-        <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-            <div style="background: #10B981; padding: 24px; text-align: center;">
-                <h1 style="color: #ffffff; margin: 0; font-size: 24px;">✅ Email Test Thành Công</h1>
-            </div>
-            <div style="padding: 32px 24px;">
-                <p style="font-size: 16px; color: #1f2937; line-height: 24px;">
-                    Xin chào!
-                </p>
-                <p style="font-size: 16px; color: #4b5563; line-height: 24px;">
-                    Đây là email thử nghiệm từ hệ thống <strong>AirHanoi</strong>. Nếu bạn nhận được email này, hệ thống gửi mail đã hoạt động tốt!
-                </p>
-                <div style="background: #D1FAE5; border: 2px solid #10B981; border-radius: 12px; padding: 24px; text-align: center; margin: 24px 0;">
-                    <p style="font-size: 20px; color: #10B981; font-weight: bold; margin: 0;">
-                        ✓ Cấu hình Gmail SMTP thành công
-                    </p>
-                </div>
-                <p style="font-size: 14px; color: #6b7280; margin-top: 24px;">
-                    Bây giờ bạn sẽ nhận được thông báo khi chất lượng không khí vượt ngưỡng đã đăng ký.
-                </p>
-            </div>
-            <div style="background: #f9fafb; padding: 24px; text-align: center;">
-                <p style="font-size: 12px; color: #9ca3af; margin: 0;">
-                    Email tự động từ AirHanoi - Hệ thống giám sát chất lượng không khí Hà Nội
-                </p>
-            </div>
-        </div>
-    </body>
-    </html>';
+    <body style="font-family: -apple-system, BlinkMacSystemFont, \' Segoe UI\', Roboto, sans-serif; background-color:
+                    #f6f9fc; margin: 0; padding: 20px;">
+                    <div
+                        style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                        <div style="background: #10B981; padding: 24px; text-align: center;">
+                            <h1 style="color: #ffffff; margin: 0; font-size: 24px;">✅ Email Test Thành Công</h1>
+                        </div>
+                        <div style="padding: 32px 24px;">
+                            <p style="font-size: 16px; color: #1f2937; line-height: 24px;">
+                                Xin chào!
+                            </p>
+                            <p style="font-size: 16px; color: #4b5563; line-height: 24px;">
+                                Đây là email thử nghiệm từ hệ thống <strong>AirHanoi</strong>. Nếu bạn nhận được email
+                                này, hệ thống gửi mail đã hoạt động tốt!
+                            </p>
+                            <div
+                                style="background: #D1FAE5; border: 2px solid #10B981; border-radius: 12px; padding: 24px; text-align: center; margin: 24px 0;">
+                                <p style="font-size: 20px; color: #10B981; font-weight: bold; margin: 0;">
+                                    ✓ Cấu hình Gmail SMTP thành công
+                                </p>
+                            </div>
+                            <p style="font-size: 14px; color: #6b7280; margin-top: 24px;">
+                                Bây giờ bạn sẽ nhận được thông báo khi chất lượng không khí vượt ngưỡng đã đăng ký.
+                            </p>
+                        </div>
+                        <div style="background: #f9fafb; padding: 24px; text-align: center;">
+                            <p style="font-size: 12px; color: #9ca3af; margin: 0;">
+                                Email tự động từ AirHanoi - Hệ thống giám sát chất lượng không khí Hà Nội
+                            </p>
+                        </div>
+                    </div>
+                    </body>
+
+                    </html>';
 }
 
 /**
  * Generate AQI alert email HTML
  */
-function generateAlertEmailHtml($username, $district, $aqi, $threshold, $pm25 = null, $temperature = null)
-{
+function generateAlertEmailHtml(
+    $username,
+    $district,
+    $aqi,
+    $threshold,
+    $pm25 = null,
+    $temperature =
+    null
+) {
     $severity = getAqiSeverity($aqi);
     $recommendations = getHealthRecommendations($aqi);
 
     $recommendationsHtml = '';
     foreach ($recommendations as $rec) {
-        $recommendationsHtml .= "<p style='font-size: 15px; line-height: 28px; color: #4b5563; margin: 0;'>• $rec</p>";
+        $recommendationsHtml .= "<p style='font-size: 15px; line-height: 28px; color: #4b5563; margin: 0;'>•
+                        $rec</p>";
     }
 
     $extraDataHtml = '';
     if ($pm25 !== null || $temperature !== null) {
         $extraDataHtml = '<div style="text-align: center; margin-bottom: 16px;">';
         if ($pm25 !== null) {
-            $extraDataHtml .= "<span style='font-size: 14px; color: #4b5563; margin: 0 12px;'>PM2.5: <strong>$pm25 µg/m³</strong></span>";
+            $extraDataHtml .= "<span style='font-size: 14px; color: #4b5563; margin: 0 12px;'>PM2.5:
+                            <strong>$pm25 µg/m³</strong></span>";
         }
         if ($temperature !== null) {
-            $extraDataHtml .= "<span style='font-size: 14px; color: #4b5563; margin: 0 12px;'>Nhiệt độ: <strong>{$temperature}°C</strong></span>";
+            $extraDataHtml .= "<span style='font-size: 14px; color: #4b5563; margin: 0 12px;'>Nhiệt độ:
+                            <strong>{$temperature}°C</strong></span>";
         }
         $extraDataHtml .= '</div>';
     }
 
     return "
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset='UTF-8'>
-        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
-    </head>
-    <body style='font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif; background-color: #f6f9fc; margin: 0; padding: 20px;'>
-        <div style='max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);'>
-            <!-- Header -->
-            <div style='background: {$severity['color']}; padding: 24px; text-align: center;'>
-                <h1 style='color: #ffffff; margin: 0; font-size: 24px;'>{$severity['icon']} AirHanoi Alert</h1>
-            </div>
-            
-            <!-- Content -->
-            <div style='padding: 32px 24px;'>
-                <p style='font-size: 16px; line-height: 24px; color: #1f2937;'>
-                    Xin chào <strong>$username</strong>,
-                </p>
-                <p style='font-size: 16px; line-height: 24px; color: #4b5563; margin-bottom: 24px;'>
-                    Hệ thống AirHanoi phát hiện chất lượng không khí tại khu vực <strong>$district</strong> đang ở mức cảnh báo:
-                </p>
-                
-                <!-- AQI Box -->
-                <div style='background: {$severity['bgColor']}; border: 2px solid {$severity['color']}; border-radius: 12px; padding: 24px; text-align: center; margin-bottom: 24px;'>
-                    <p style='font-size: 48px; font-weight: bold; color: {$severity['color']}; margin: 0; line-height: 1;'>AQI: $aqi</p>
-                    <p style='font-size: 20px; font-weight: 600; color: {$severity['color']}; margin: 8px 0 0 0;'>{$severity['label']}</p>
-                    <p style='font-size: 14px; color: #6b7280; margin: 12px 0 0 0;'>Ngưỡng đăng ký của bạn: $threshold</p>
-                </div>
-                
-                $extraDataHtml
-                
-                <hr style='border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;'>
-                
-                <!-- Recommendations -->
-                <h2 style='font-size: 18px; font-weight: 600; color: #1f2937; margin-bottom: 16px;'>📋 Khuyến nghị sức khỏe</h2>
-                $recommendationsHtml
-                
-                <hr style='border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;'>
-                
-                <!-- CTA -->
-                <div style='text-align: center; margin-top: 24px;'>
-                    <a href='http://localhost:5173/' style='background: #3b82f6; color: #ffffff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px; display: inline-block;'>
-                        Xem chi tiết trên AirHanoi
-                    </a>
-                </div>
-            </div>
-            
-            <!-- Footer -->
-            <div style='background: #f9fafb; padding: 24px; text-align: center;'>
-                <p style='font-size: 12px; color: #9ca3af; margin: 4px 0;'>Email này được gửi tự động từ hệ thống AirHanoi.</p>
-                <p style='font-size: 12px; color: #9ca3af; margin: 4px 0;'>Bạn nhận email này vì đã đăng ký nhận thông báo khi AQI ≥ $threshold.</p>
-                <a href='http://localhost:5173/settings' style='font-size: 12px; color: #3b82f6; text-decoration: underline;'>Thay đổi cài đặt thông báo</a>
-            </div>
-        </div>
-    </body>
-    </html>";
+                    <!DOCTYPE html>
+                    <html>
+
+                    <head>
+                        <meta charset='UTF-8'>
+                        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                    </head>
+
+                    <body
+                        style='font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif; background-color: #f6f9fc; margin: 0; padding: 20px;'>
+                        <div
+                            style='max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);'>
+                            <!-- Header -->
+                            <div style='background: {$severity[' color']}; padding: 24px; text-align: center;'>
+                                <h1 style='color: #ffffff; margin: 0; font-size: 24px;'>{$severity['icon']} AirHanoi
+                                    Alert</h1>
+                            </div>
+
+                            <!-- Content -->
+                            <div style='padding: 32px 24px;'>
+                                <p style='font-size: 16px; line-height: 24px; color: #1f2937;'>
+                                    Xin chào <strong>$username</strong>,
+                                </p>
+                                <p style='font-size: 16px; line-height: 24px; color: #4b5563; margin-bottom: 24px;'>
+                                    Hệ thống AirHanoi phát hiện chất lượng không khí tại khu vực
+                                    <strong>$district</strong> đang ở mức cảnh báo:
+                                </p>
+
+                                <!-- AQI Box -->
+                                <div style='background: {$severity[' bgColor']}; border: 2px solid {$severity['color']};
+                                    border-radius: 12px; padding: 24px; text-align: center; margin-bottom: 24px;'>
+                                    <p style='font-size: 48px; font-weight: bold; color: {$severity[' color']}; margin:
+                                        0; line-height: 1;'>AQI: $aqi</p>
+                                    <p style='font-size: 20px; font-weight: 600; color: {$severity[' color']}; margin:
+                                        8px 0 0 0;'>{$severity['label']}</p>
+                                    <p style='font-size: 14px; color: #6b7280; margin: 12px 0 0 0;'>Ngưỡng đăng ký của
+                                        bạn: $threshold</p>
+                                </div>
+
+                                $extraDataHtml
+
+                                <hr style='border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;'>
+
+                                <!-- Recommendations -->
+                                <h2 style='font-size: 18px; font-weight: 600; color: #1f2937; margin-bottom: 16px;'>📋
+                                    Khuyến nghị sức khỏe</h2>
+                                $recommendationsHtml
+
+                                <hr style='border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;'>
+
+                                <!-- CTA -->
+                                <div style='text-align: center; margin-top: 24px;'>
+                                    <a href='http://localhost:5173/'
+                                        style='background: #3b82f6; color: #ffffff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px; display: inline-block;'>
+                                        Xem chi tiết trên AirHanoi
+                                    </a>
+                                </div>
+                            </div>
+
+                            <!-- Footer -->
+                            <div style='background: #f9fafb; padding: 24px; text-align: center;'>
+                                <p style='font-size: 12px; color: #9ca3af; margin: 4px 0;'>Email này được gửi tự động từ
+                                    hệ thống AirHanoi.</p>
+                                <p style='font-size: 12px; color: #9ca3af; margin: 4px 0;'>Bạn nhận email này vì đã đăng
+                                    ký nhận thông báo khi AQI ≥ $threshold.</p>
+                                <a href='http://localhost:5173/settings'
+                                    style='font-size: 12px; color: #3b82f6; text-decoration: underline;'>Thay đổi cài
+                                    đặt thông báo</a>
+                            </div>
+                        </div>
+                    </body>
+
+                    </html>";
 }
 ?>
