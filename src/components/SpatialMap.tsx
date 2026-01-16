@@ -305,20 +305,20 @@ const SpatialMap: React.FC<SpatialMapProps> = ({ data }) => {
 
     return (
         <div className="p-0 h-full flex flex-col relative animate-fade-in">
-            {/* Title Overlay - Compact on Mobile */}
-            <div className="absolute top-4 left-4 lg:left-14 z-[400] bg-white/90 backdrop-blur-md p-3 lg:p-4 rounded-2xl shadow-2xl border border-slate-200 pointer-events-none transition-all max-w-[calc(100vw-80px)] lg:max-w-xs">
+            {/* Title Overlay - Completely Hidden on Mobile to save space */}
+            <div className="hidden lg:flex absolute top-4 left-14 z-[400] bg-white/90 backdrop-blur-md p-4 rounded-2xl shadow-2xl border border-slate-200 max-w-xs pointer-events-none transition-all">
                 <div className="flex items-center gap-3">
                     <div className="p-2 bg-blue-100 text-blue-600 rounded-lg shrink-0">
                         <Layers size={20} />
                     </div>
                     <div className="overflow-hidden">
-                        <h1 className="text-sm lg:text-lg font-bold text-slate-800 leading-tight truncate">Bản Đồ Giao Thông</h1>
-                        <p className="text-[10px] lg:text-xs text-slate-500 font-medium truncate">AQI theo quy mô & vị trí</p>
+                        <h1 className="text-lg font-bold text-slate-800 leading-tight truncate">Bản Đồ Giao Thông</h1>
+                        <p className="text-xs text-slate-500 font-medium truncate">AQI theo quy mô & vị trí</p>
                     </div>
                 </div>
             </div>
 
-            {/* MOBILE TOGGLE BUTTON (Visible only on mobile/tablet) */}
+            {/* MOBILE TOGGLE BUTTON */}
             <button
                 onClick={() => setShowMobileControls(!showMobileControls)}
                 className="lg:hidden absolute top-4 right-4 z-[401] bg-white p-3 rounded-full shadow-xl border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors"
@@ -327,19 +327,35 @@ const SpatialMap: React.FC<SpatialMapProps> = ({ data }) => {
                 {showMobileControls ? <XCircle size={24} /> : <Settings size={24} />}
             </button>
 
-            {/* CONTROL PANEL */}
-            {/* On Mobile: Absolute, full screen or large dropdown, toggled by state */}
-            {/* On Desktop: Absolute top-right, always visible */}
+            {/* MOBILE BACKDROP (Darkens map when controls are open) */}
+            {showMobileControls && (
+                <div
+                    className="fixed inset-0 bg-black/40 z-[399] lg:hidden backdrop-blur-sm transition-opacity"
+                    onClick={() => setShowMobileControls(false)}
+                ></div>
+            )}
+
+            {/* CONTROL PANEL CONTAINER */}
+            {/* Mobile: Bottom Sheet (Fixed Bottom). Desktop: Top-Right Absolute */}
             <div className={`
-                absolute z-[400] flex flex-col gap-2 transition-all duration-300 ease-in-out
-                lg:top-4 lg:right-4 lg:items-end lg:w-auto lg:h-auto lg:visible lg:opacity-100 lg:translate-y-0
+                z-[400] flex flex-col gap-3 transition-all duration-300 ease-in-out
+                
+                /* DESKTOP STYLES */
+                lg:absolute lg:top-4 lg:right-4 lg:items-end lg:w-auto lg:h-auto lg:visible lg:opacity-100 lg:translate-y-0 lg:bg-transparent lg:p-0 lg:shadow-none lg:rounded-none
+
+                /* MOBILE STYLES (Bottom Sheet) */
+                fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl p-5 shadow-[0_-5px_30px_rgba(0,0,0,0.15)]
+                max-h-[85vh] overflow-y-auto
                 ${showMobileControls
-                    ? 'top-20 right-4 left-4 visible opacity-100 translate-y-0'
-                    : 'top-20 right-4 left-4 invisible opacity-0 -translate-y-4 lg:visible lg:opacity-100 lg:translate-y-0 lg:left-auto'}
+                    ? 'translate-y-0 visible opacity-100'
+                    : 'translate-y-full invisible opacity-0 lg:translate-y-0 lg:visible lg:opacity-100'}
             `}>
 
+                {/* Mobile Handle Bar */}
+                <div className="lg:hidden w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-2"></div>
+
                 {/* 1. Map Style Selector Pattern */}
-                <div className="bg-white/95 backdrop-blur-md p-3 rounded-2xl shadow-xl border border-slate-200 animate-slide-in">
+                <div className="bg-slate-50 lg:bg-white/95 lg:backdrop-blur-md p-3 rounded-2xl lg:shadow-xl border border-slate-200/60 lg:border-slate-200">
                     <div className="flex items-center gap-2 mb-3 px-1">
                         <Layers size={16} className="text-slate-500" />
                         <span className="text-xs font-bold text-slate-700 uppercase">Loại bản đồ</span>
@@ -351,37 +367,38 @@ const SpatialMap: React.FC<SpatialMapProps> = ({ data }) => {
                                 onClick={() => setMapStyle(style)}
                                 className={`flex flex-col items-center gap-1 p-2 rounded-xl border transition-all flex-1 lg:flex-none lg:w-16
                                     ${mapStyle === style
-                                        ? 'bg-slate-100 border-blue-500 shadow-inner'
-                                        : 'border-transparent hover:bg-slate-50'
+                                        ? 'bg-white border-blue-500 shadow-sm lg:bg-slate-100 lg:shadow-inner'
+                                        : 'border-transparent hover:bg-white/50'
                                     }`}
                             >
-                                <div className={`w-8 h-8 rounded-full border-2 ${mapStyle === style ? 'border-blue-500' : 'border-slate-300'}`} style={{ background: mapStyles[style].color }}></div>
-                                <span className={`text-[9px] font-bold ${mapStyle === style ? 'text-blue-600' : 'text-slate-500'}`}>{mapStyles[style].label}</span>
+                                <div className={`w-10 h-10 lg:w-8 lg:h-8 rounded-full border-2 ${mapStyle === style ? 'border-blue-500' : 'border-slate-300'}`} style={{ background: mapStyles[style].color }}></div>
+                                <span className={`text-[10px] lg:text-[9px] font-bold ${mapStyle === style ? 'text-blue-600' : 'text-slate-500'}`}>{mapStyles[style].label}</span>
                             </button>
                         ))}
                     </div>
                 </div>
 
                 {/* 2. Filter Control */}
-                <div className="bg-white/95 backdrop-blur-md p-3 rounded-2xl shadow-xl border border-slate-200 animate-slide-in" style={{ animationDelay: '0.1s' }}>
+                <div className="bg-slate-50 lg:bg-white/95 lg:backdrop-blur-md p-3 rounded-2xl lg:shadow-xl border border-slate-200/60 lg:border-slate-200">
                     <div className="flex items-center gap-2 mb-3 px-1">
                         <Filter size={16} className="text-slate-500" />
                         <span className="text-xs font-bold text-slate-700 uppercase">Bộ lọc AQI</span>
                     </div>
-                    <div className="grid grid-cols-2 lg:flex lg:flex-col gap-1.5 min-w-[140px]">
+                    {/* Grid on Mobile, Column on Desktop */}
+                    <div className="grid grid-cols-2 lg:flex lg:flex-col gap-2 lg:gap-1.5 min-w-[140px]">
                         {filters.map(f => (
                             <button
                                 key={f.id}
                                 onClick={() => setFilterLevel(f.id)}
-                                className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-all border
+                                className={`flex items-center justify-between px-3 py-2.5 lg:py-2 rounded-xl text-xs font-bold transition-all border
                                     ${filterLevel === f.id
-                                        ? 'bg-slate-800 text-white border-slate-800 shadow-md transform scale-105'
+                                        ? 'bg-slate-800 text-white border-slate-800 shadow-md transform scale-[1.02]'
                                         : 'bg-white text-slate-600 border-slate-100 hover:bg-slate-50'
                                     }`}
                             >
                                 <span>{f.label.split('(')[0]}</span>
                                 {f.id !== 'all' && (
-                                    <span className="w-2.5 h-2.5 rounded-full shrink-0 ml-2" style={{ backgroundColor: f.color }}></span>
+                                    <span className="w-3 h-3 lg:w-2.5 lg:h-2.5 rounded-full shrink-0 ml-2" style={{ backgroundColor: f.color }}></span>
                                 )}
                             </button>
                         ))}
@@ -389,26 +406,26 @@ const SpatialMap: React.FC<SpatialMapProps> = ({ data }) => {
                 </div>
 
                 {/* 3. Real-time Location Tracking */}
-                <div className="bg-white/95 backdrop-blur-md p-3 rounded-2xl shadow-xl border border-slate-200 w-full lg:max-w-[250px] pointer-events-auto animate-slide-in" style={{ animationDelay: '0.2s' }}>
+                <div className="bg-slate-50 lg:bg-white/95 lg:backdrop-blur-md p-3 rounded-2xl lg:shadow-xl border border-slate-200/60 lg:border-slate-200 w-full lg:max-w-[250px] pointer-events-auto">
                     <button
                         onClick={isTracking ? stopTracking : startTracking}
-                        className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all border
+                        className={`w-full flex items-center justify-center gap-2 px-3 py-3 lg:py-2 rounded-xl text-xs font-bold transition-all border shadow-sm
                             ${isTracking
-                                ? 'bg-red-500 text-white border-red-500 shadow-md'
+                                ? 'bg-red-500 text-white border-red-500'
                                 : 'bg-blue-500 text-white border-blue-500 hover:bg-blue-600'
                             }`}
                     >
-                        <MapPin size={14} />
+                        <MapPin size={16} className="lg:w-3.5 lg:h-3.5" />
                         {isTracking ? 'Dừng Theo Dõi' : 'Vị Trí Của Tôi'}
                     </button>
                     {trackingError && (
-                        <div className="mt-2 text-xs text-red-600 bg-red-100 p-2 rounded-lg flex items-start gap-2 text-left">
+                        <div className="mt-2 text-xs text-red-600 bg-red-100 p-2 rounded-lg flex items-start gap-2 text-left animate-fade-in">
                             <XCircle size={14} className="mt-0.5 shrink-0" /> <span className="break-words w-full">{trackingError}</span>
                         </div>
                     )}
                 </div>
 
-                <div className="bg-white/90 backdrop-blur-md px-4 py-2 rounded-full shadow-lg border border-slate-200 text-xs font-bold text-slate-600 self-end lg:self-auto">
+                <div className="lg:bg-white/90 lg:backdrop-blur-md px-4 py-2 rounded-full lg:shadow-lg lg:border border-slate-200 text-xs font-bold text-slate-400 lg:text-slate-600 text-center self-center lg:self-end">
                     {filteredData.length} điểm quan trắc
                 </div>
             </div>
