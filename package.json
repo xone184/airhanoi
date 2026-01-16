@@ -2,7 +2,7 @@
   "name": "hanoi-air-quality-monitor",
   "version": "1.0.0",
   "private": true,
-  "homepage": "https://xone184.github.io/doan_airhanoi",
+  "homepage": "https://xone184.github.io/airhanoi",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
