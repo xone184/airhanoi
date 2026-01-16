@@ -110,6 +110,7 @@ function sendEmailViaPHPMailer($to, $subject, $htmlBody)
 
     try {
         // Server settings
+        // $mail->SMTPDebug = SMTP::DEBUG_SERVER; // Enable verbose debug output
         $mail->isSMTP();
         $mail->Host = 'smtp.gmail.com';
         $mail->SMTPAuth = true;
@@ -133,7 +134,9 @@ function sendEmailViaPHPMailer($to, $subject, $htmlBody)
         return ['success' => true];
 
     } catch (Exception $e) {
-        return ['success' => false, 'error' => "Không thể gửi email: {$mail->ErrorInfo}"];
+        return ['success' => false, 'error' => "Mailer Error: {$mail->ErrorInfo}"];
+    } catch (\Throwable $e) {
+        return ['success' => false, 'error' => "System Error: " . $e->getMessage()];
     }
 }
 
