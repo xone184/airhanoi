@@ -3,8 +3,11 @@ FROM php:8.2-apache
 # Cài đặt extension MySQLi và PDO
 RUN docker-php-ext-install mysqli pdo pdo_mysql
 
-# Kích hoạt mod_rewrite cho Apache (nếu cần URL rewrite)
-RUN a2enmod rewrite headers
+# Kích hoạt mod_rewrite cho Apache
+RUN a2enmod rewrite
+# Kích hoạt mod_headers cho CORS
+RUN a2enmod headers
+
 
 # Configure Apache to allow .htaccess overrides
 RUN sed -i 's/AllowOverride None/AllowOverride All/' /etc/apache2/apache2.conf
