@@ -4,7 +4,11 @@ FROM php:8.2-apache
 RUN docker-php-ext-install mysqli pdo pdo_mysql
 
 # Kích hoạt mod_rewrite cho Apache (nếu cần URL rewrite)
-RUN a2enmod rewrite
+RUN a2enmod rewrite headers
+
+# Configure Apache to allow .htaccess overrides
+RUN sed -i 's/AllowOverride None/AllowOverride All/' /etc/apache2/apache2.conf
+
 
 # Copy toàn bộ source code vào image
 COPY . /var/www/html/
