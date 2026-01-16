@@ -1,9 +1,11 @@
 import { DistrictData } from "../types";
 
 // Groq API Configuration
-const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY || "";
-const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
-const GROQ_MODEL = import.meta.env.VITE_GROQ_MODEL || "llama-3.3-70b-versatile"; // Fast and powerful
+// Groq API Configuration
+// Call backend proxy instead of direct Groq API
+const GROQ_API_URL = import.meta.env.VITE_API_BASE_URL ? `${import.meta.env.VITE_API_BASE_URL}/chat.php` : "http://localhost/airhanoi/api/chat.php";
+const GROQ_MODEL = "llama-3.3-70b-versatile"; // Fast and powerful
+
 
 interface GroqMessage {
     role: "system" | "user" | "assistant";
@@ -25,7 +27,6 @@ const callGroqChat = async (
         method: "POST",
         headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${GROQ_API_KEY}`,
         },
         body: JSON.stringify({
             model: GROQ_MODEL,
