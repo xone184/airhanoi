@@ -15,8 +15,21 @@ require __DIR__ . '/libs/PHPMailer-master/src/PHPMailer.php';
 require __DIR__ . '/libs/PHPMailer-master/src/SMTP.php';
 
 // config.php handles headers, error reporting, and DB connection
+// config.php handles headers, error reporting, and DB connection
 require_once 'config.php';
-require_once 'mail_config.php';
+
+// Safe load mail_config only if exists
+if (file_exists('mail_config.php')) {
+    require_once 'mail_config.php';
+}
+
+// Fallback to Env Vars if constants not defined
+if (!defined('MAIL_USER'))
+    define('MAIL_USER', getenv('MAIL_USER') ?: '');
+if (!defined('MAIL_PASS'))
+    define('MAIL_PASS', getenv('MAIL_PASS') ?: '');
+if (!defined('MAIL_FROM_NAME'))
+    define('MAIL_FROM_NAME', getenv('MAIL_FROM_NAME') ?: 'AirHanoi');
 
 $db = Database::getInstance()->getConnection();
 

@@ -11,13 +11,38 @@ use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\SMTP;
 use PHPMailer\PHPMailer\Exception;
 
-// Load PHPMailer classes
+// Enable Debugging
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
+// Load PHPMailer classes safely
+$phpMailerPath = __DIR__ . '/libs/PHPMailer-master/src/PHPMailer.php';
+if (!file_exists($phpMailerPath)) {
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Server Error: PHPMailer library not found. Check deployment.']);
+    exit;
+}
+
 require __DIR__ . '/libs/PHPMailer-master/src/Exception.php';
 require __DIR__ . '/libs/PHPMailer-master/src/PHPMailer.php';
 require __DIR__ . '/libs/PHPMailer-master/src/SMTP.php';
 
 require_once 'config.php';
-require_once 'mail_config.php';
+
+// Safe load mail_config only if exists (it might be ignored in git)
+if (file_exists('mail_config.php')) {
+    require_once 'mail_config.php';
+}
+
+// Fallback to Env Vars if constants not defined
+if (!defined('MAIL_USER'))
+    define('MAIL_USER', getenv('MAIL_USER') ?: '');
+if (!defined('MAIL_PASS'))
+    define('MAIL_PASS', getenv('MAIL_PASS') ?: '');
+if (!defined('MAIL_FROM_NAME'))
+    define('MAIL_FROM_NAME', getenv('MAIL_FROM_NAME') ?: 'AirHanoi');
+
 
 header('Content-Type: application/json');
 
