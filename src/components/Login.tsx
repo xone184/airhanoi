@@ -21,7 +21,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => {
         e.preventDefault();
         console.log('Form submitted!', { username, password: '***' });
         setError('');
-        
+
         const cleanUsername = username.trim();
         const cleanPassword = password.trim();
 
@@ -37,7 +37,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => {
             // Call API to login
             const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost/hanoi-air-quality-monitor/api';
             console.log('Login attempt:', { username: cleanUsername, API_BASE });
-            
+
             const response = await fetch(`${API_BASE}/auth.php?action=login`, {
                 method: 'POST',
                 headers: {
@@ -93,8 +93,8 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => {
                 console.error('Login failed:', result);
                 setError(result.error || 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.');
                 setLoading(false);
-            return;
-        }
+                return;
+            }
 
             // Save user and token to localStorage
             if (result.data.user && result.data.token) {
@@ -102,7 +102,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => {
                     ...result.data.user,
                     token: result.data.token
                 }));
-                
+
                 onLogin({
                     user_id: result.data.user.user_id,
                     username: result.data.user.username,
@@ -123,13 +123,13 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => {
                 stack: error.stack,
                 url: `${API_BASE_FOR_ERROR}/auth.php?action=login`
             });
-            
+
             // Hiển thị lỗi chi tiết hơn
             if (error.message && error.message.includes('fetch')) {
                 if (error.message.includes('CORS')) {
                     setError('Lỗi CORS: Header Access-Control-Allow-Origin bị trùng lặp. Đang sửa...');
                 } else {
-                    setError('Không thể kết nối đến server. Kiểm tra: 1) XAMPP Apache đã chạy chưa? 2) URL API đúng chưa? 3) CORS được cấu hình chưa?');
+                    setError('Không thể kết nối đến server.');
                 }
             } else {
                 setError('Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng và xem Console (F12) để biết chi tiết.');
@@ -198,10 +198,10 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => {
                         {!loading && <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />}
                     </button>
                 </form>
-                
+
                 <div className="mt-8 pt-6 border-t border-white/10 text-center">
                     <p className="text-slate-400 text-sm">Chưa có tài khoản?</p>
-                    <button 
+                    <button
                         onClick={onSwitchToRegister}
                         className="text-cyan-400 font-bold hover:text-cyan-300 mt-2 transition-colors hover:underline"
                     >
@@ -209,7 +209,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => {
                     </button>
                 </div>
 
-                
+
             </div>
         </div>
     );
