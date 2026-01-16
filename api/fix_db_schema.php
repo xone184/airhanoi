@@ -15,7 +15,7 @@ try {
     // Add 'phone' column if missing
     if (!in_array('phone', $columns)) {
         echo "Adding missing column 'phone'...\n";
-        $db->exec("ALTER TABLE user_settings ADD COLUMN phone VARCHAR(20) DEFAULT '' AFTER email");
+        $db->exec("ALTER TABLE user_settings ADD COLUMN phone VARCHAR(20) DEFAULT ''");
         echo "✅ Added 'phone' column.\n";
     } else {
         echo "ℹ️ Column 'phone' already exists.\n";
