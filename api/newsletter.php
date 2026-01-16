@@ -178,8 +178,9 @@ function sendWelcomeEmail($to)
         // Use credentials from mail_config.php 
         $mail->Username = defined('MAIL_USER') ? MAIL_USER : '';
         $mail->Password = defined('MAIL_PASS') ? MAIL_PASS : '';
-        $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
-        $mail->Port = 465;
+        // Revert to 587/STARTTLS with IPv4 fix
+        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+        $mail->Port = 587;
 
         $mail->SMTPOptions = array(
             'ssl' => array(
