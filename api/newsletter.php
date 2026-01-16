@@ -172,7 +172,8 @@ function sendWelcomeEmail($to)
     try {
         // Server settings
         $mail->isSMTP();
-        $mail->Host = 'smtp.gmail.com';
+        // Force IPv4
+        $mail->Host = gethostbyname('smtp.gmail.com');
         $mail->SMTPAuth = true;
         // Use credentials from mail_config.php 
         $mail->Username = defined('MAIL_USER') ? MAIL_USER : '';

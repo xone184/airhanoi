@@ -137,7 +137,8 @@ function sendEmailViaPHPMailer($to, $subject, $htmlBody)
         // Server settings
 // $mail->SMTPDebug = SMTP::DEBUG_SERVER; // Enable verbose debug output
         $mail->isSMTP();
-        $mail->Host = 'smtp.gmail.com';
+        // Force IPv4
+        $mail->Host = gethostbyname('smtp.gmail.com');
         $mail->SMTPAuth = true;
         $mail->Username = MAIL_USER;
         $mail->Password = MAIL_PASS;
