@@ -145,8 +145,8 @@ function sendEmailViaPHPMailer($to, $subject, $htmlBody)
     try {
         // Server settings
         $mail->isSMTP();
-        // Force IPv4 Resolution
-        $mail->Host = gethostbyname('smtp.gmail.com');
+        // Force IPv4 Resolution using Googlemail alias
+        $mail->Host = gethostbyname('smtp.googlemail.com');
         $mail->SMTPAuth = true;
         $mail->Username = MAIL_USER;
         $mail->Password = MAIL_PASS;

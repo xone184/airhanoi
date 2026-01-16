@@ -172,8 +172,8 @@ function sendWelcomeEmail($to)
     try {
         // Server settings
         $mail->isSMTP();
-        // Force IPv4
-        $mail->Host = gethostbyname('smtp.gmail.com');
+        // Force IPv4 Resolution using Googlemail alias
+        $mail->Host = gethostbyname('smtp.googlemail.com');
         $mail->SMTPAuth = true;
         // Use credentials from mail_config.php 
         $mail->Username = defined('MAIL_USER') ? MAIL_USER : '';
