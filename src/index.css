@@ -1,0 +1,276 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Default Dark Mode Variables */
+  --glass-bg: rgba(15, 23, 42, 0.65);
+  /* Dark Slate transparent */
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --input-bg: rgba(15, 23, 42, 0.5);
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: #020617;
+  color: var(--text-primary);
+
+  /* Night Mode Image (Cyberpunk/City Night) */
+  background-image: url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop');
+  background-size: cover;
+  background-position: center;
+  /* Đổi từ fixed -> scroll để giảm lag khi cuộn trên máy yếu */
+  background-attachment: scroll;
+  background-repeat: no-repeat;
+  transition: all 0.5s ease-in-out;
+}
+
+/* Dark Overlay (Default) */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(2, 6, 23, 0.7);
+  /* Darken the night image slightly */
+  z-index: -1;
+  /* Giảm/loại bỏ blur để tăng FPS khi cuộn */
+  backdrop-filter: blur(0.5px);
+  -webkit-backdrop-filter: blur(0.5px);
+  transition: opacity 0.3s ease-in-out;
+}
+
+/* =========================================
+   LIGHT MODE (DAYTIME) CONFIGURATION
+   ========================================= */
+body.light-mode {
+  /* Day Mode Image (Hanoi/Nature/Bright City) */
+  background-image: url('https://images.unsplash.com/photo-1528127269322-539801943592?q=80&w=2070&auto=format&fit=crop');
+  background-color: #f8fafc;
+  /* Light background color to override dark base */
+  color: #1e293b;
+  /* Slate 800 - High Contrast Dark Text */
+}
+
+body.light-mode::before {
+  /* Lớp phủ sáng mờ */
+  background: rgba(255, 255, 255, 0.06);
+  /* Giảm blur để tránh tốn GPU */
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+/* --- COLOR INVERSION LOGIC --- */
+
+/* 1. Text Inversion: Force White text to become Dark Slate */
+body.light-mode .text-white {
+  color: #0f172a !important;
+}
+
+body.light-mode .text-slate-100 {
+  color: #1e293b !important;
+}
+
+body.light-mode .text-slate-200 {
+  color: #334155 !important;
+}
+
+body.light-mode .text-slate-300 {
+  color: #475569 !important;
+}
+
+body.light-mode .text-slate-400 {
+  color: #64748b !important;
+}
+
+body.light-mode .text-slate-500 {
+  color: #64748b !important;
+}
+
+/* 2. Background Inversion: Dark Glass -> White Frosted Glass */
+body.light-mode .glass-panel,
+body.light-mode .bg-slate-800,
+body.light-mode .bg-slate-900,
+body.light-mode .bg-slate-950 {
+  background-color: rgba(255, 255, 255, 0.7) !important;
+  border-color: rgba(255, 255, 255, 0.6) !important;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08) !important;
+  /* Reduced blur for better scroll performance */
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+}
+
+body.light-mode .bg-slate-900\/80 {
+  background-color: rgba(255, 255, 255, 0.85) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.5) !important;
+}
+
+body.light-mode .bg-slate-700,
+body.light-mode .bg-slate-700\/50,
+body.light-mode .bg-white\/5,
+body.light-mode .bg-white\/10 {
+  background-color: rgba(0, 0, 0, 0.06) !important;
+  border-color: rgba(0, 0, 0, 0.05) !important;
+}
+
+body.light-mode input,
+body.light-mode select,
+body.light-mode textarea,
+body.light-mode .glass-input {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+  color: #0f172a !important;
+  border: 1px solid #cbd5e1 !important;
+}
+
+body.light-mode input::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* Chart Text Fixes */
+body.light-mode text {
+  fill: #334155 !important;
+}
+
+body.light-mode .recharts-cartesian-grid-horizontal line,
+body.light-mode .recharts-cartesian-grid-vertical line {
+  stroke: #cbd5e1 !important;
+}
+
+body.light-mode ::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.6);
+}
+
+/* =========================================
+   INVARIANT UTILITIES (FIX FOR ICONS/BUTTONS)
+   Use these classes to force elements to STAY dark/white
+   regardless of Day/Night mode.
+   ========================================= */
+
+/* Force Text to stay White (for Buttons, Dark Cards, Gradients) */
+body.light-mode .text-invariant-white,
+.text-invariant-white {
+  color: #ffffff !important;
+}
+
+/* Force Background to stay Dark Slate (for Badges with neon text) */
+body.light-mode .bg-invariant-slate-900,
+.bg-invariant-slate-900 {
+  background-color: #0f172a !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+
+/* --- COMMON UTILITIES --- */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(71, 85, 105, 0.5);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(99, 102, 241, 0.8);
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-5px);
+  }
+
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.glass-panel {
+  background: var(--glass-bg);
+  /* Reduced blur from 6px to 3px for better scroll FPS */
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.glass-input {
+  background: var(--input-bg);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  /* Loại bỏ blur để giảm chi phí render khi nhập liệu/cuộn */
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.leaflet-container {
+  background: #0f172a;
+  font-family: 'Inter', sans-serif;
+}
+
+body.light-mode .leaflet-container {
+  background: #f1f5f9;
+}

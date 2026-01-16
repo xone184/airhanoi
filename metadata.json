@@ -1,0 +1,5 @@
+{
+  "name": "Hanoi Air Quality Monitor",
+  "description": "A comprehensive realtime air quality monitoring, forecasting, and AI analysis system for Hanoi, visualizing data from Open-Meteo and Tomorrow.io.",
+  "requestFramePermissions": []
+}
