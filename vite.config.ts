@@ -4,6 +4,7 @@ import react from '@vitejs/plugin-react';
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, (process as any).cwd(), '');
   return {
+    base: '/doan_airhanoi/',
     plugins: [react()],
     define: {
       // Polyfill process.env for the application code

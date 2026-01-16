@@ -28,7 +28,7 @@ SET time_zone = "+00:00";
 --
 
 CREATE TABLE `chat_history` (
-  `chat_id` bigint(20) NOT NULL,
+  `chat_id` bigint(20) NOT NULL PRIMARY KEY,
   `user_id` int(11) NOT NULL,
   `message_role` enum('user','model') NOT NULL,
   `message_text` text NOT NULL,
@@ -43,7 +43,7 @@ CREATE TABLE `chat_history` (
 --
 
 CREATE TABLE `dim_aqi_scale` (
-  `aqi_level_id` int(11) NOT NULL,
+  `aqi_level_id` int(11) NOT NULL PRIMARY KEY,
   `min_aqi` int(11) NOT NULL COMMENT 'Giá trị AQI tối thiểu',
   `max_aqi` int(11) NOT NULL COMMENT 'Giá trị AQI tối đa',
   `level_name` varchar(50) NOT NULL COMMENT 'Tên mức độ (Tốt, Trung bình, Kém, Xấu, Rất xấu, Nguy hại)',
@@ -73,7 +73,7 @@ INSERT INTO `dim_aqi_scale` (`aqi_level_id`, `min_aqi`, `max_aqi`, `level_name`,
 --
 
 CREATE TABLE `dim_districts` (
-  `district_id` int(11) NOT NULL,
+  `district_id` int(11) NOT NULL PRIMARY KEY,
   `name` varchar(100) NOT NULL COMMENT 'Tên quận/huyện',
   `latitude` decimal(10,7) NOT NULL COMMENT 'Vĩ độ',
   `longitude` decimal(10,7) NOT NULL COMMENT 'Kinh độ',
@@ -124,7 +124,7 @@ INSERT INTO `dim_districts` (`district_id`, `name`, `latitude`, `longitude`, `cr
 --
 
 CREATE TABLE `dim_pollution_types` (
-  `type_id` int(11) NOT NULL,
+  `type_id` int(11) NOT NULL PRIMARY KEY,
   `type_code` varchar(50) NOT NULL COMMENT 'Mã loại (burning, construction, traffic, industrial, other)',
   `type_name` varchar(100) NOT NULL COMMENT 'Tên loại ô nhiễm',
   `description` text DEFAULT NULL,
@@ -149,7 +149,7 @@ INSERT INTO `dim_pollution_types` (`type_id`, `type_code`, `type_name`, `descrip
 --
 
 CREATE TABLE `fact_air_quality` (
-  `record_id` bigint(20) NOT NULL,
+  `record_id` bigint(20) NOT NULL PRIMARY KEY,
   `district_id` int(11) NOT NULL,
   `datetime` datetime NOT NULL COMMENT 'Thời gian đo',
   `pm25` decimal(8,2) NOT NULL COMMENT 'Nồng độ PM2.5 (µg/m³)',
@@ -568,7 +568,7 @@ INSERT INTO `fact_air_quality` (`record_id`, `district_id`, `datetime`, `pm25`, 
 --
 
 CREATE TABLE `fact_forecast` (
-  `forecast_id` bigint(20) NOT NULL,
+  `forecast_id` bigint(20) NOT NULL PRIMARY KEY,
   `district_id` int(11) NOT NULL,
   `forecast_datetime` datetime NOT NULL COMMENT 'Thời gian dự báo',
   `pm25_forecast` decimal(8,2) NOT NULL,
@@ -2548,7 +2548,7 @@ INSERT INTO `fact_forecast` (`forecast_id`, `district_id`, `forecast_datetime`, 
 --
 
 CREATE TABLE `health_logs` (
-  `log_id` int(11) NOT NULL,
+  `log_id` int(11) NOT NULL PRIMARY KEY,
   `user_id` int(11) NOT NULL,
   `log_date` date NOT NULL COMMENT 'Ngày ghi nhận',
   `symptoms` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT 'Danh sách triệu chứng: ["ho", "kho_tho", "met_moi"]' CHECK (json_valid(`symptoms`)),
@@ -2584,7 +2584,7 @@ INSERT INTO `health_logs` (`log_id`, `user_id`, `log_date`, `symptoms`, `severit
 --
 
 CREATE TABLE `newsletter_subscribers` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL PRIMARY KEY,
   `email` varchar(255) NOT NULL,
   `subscribed_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `status` enum('active','unsubscribed') DEFAULT 'active',
@@ -2606,7 +2606,7 @@ INSERT INTO `newsletter_subscribers` (`id`, `email`, `subscribed_at`, `status`, 
 --
 
 CREATE TABLE `news_items` (
-  `news_id` int(11) NOT NULL,
+  `news_id` int(11) NOT NULL PRIMARY KEY,
   `title` varchar(500) NOT NULL,
   `summary` text NOT NULL,
   `content` longtext DEFAULT NULL,
@@ -2691,7 +2691,7 @@ INSERT INTO `news_items` (`news_id`, `title`, `summary`, `content`, `category`, 
 --
 
 CREATE TABLE `pollution_reports` (
-  `report_id` int(11) NOT NULL,
+  `report_id` int(11) NOT NULL PRIMARY KEY,
   `user_id` int(11) NOT NULL,
   `district_id` int(11) NOT NULL,
   `address` varchar(500) NOT NULL COMMENT 'Địa chỉ cụ thể',
@@ -2730,7 +2730,7 @@ INSERT INTO `pollution_reports` (`report_id`, `user_id`, `district_id`, `address
 --
 
 CREATE TABLE `system_settings` (
-  `id` int(11) NOT NULL CHECK (`id` = 1),
+  `id` int(11) NOT NULL PRIMARY KEY CHECK (`id` = 1),
   `maintenance_mode` tinyint(1) NOT NULL DEFAULT 0,
   `refresh_interval` varchar(16) NOT NULL DEFAULT '15m',
   `last_updated` datetime DEFAULT NULL,
@@ -2751,7 +2751,7 @@ INSERT INTO `system_settings` (`id`, `maintenance_mode`, `refresh_interval`, `la
 --
 
 CREATE TABLE `users` (
-  `user_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL PRIMARY KEY,
   `username` varchar(100) NOT NULL COMMENT 'Tên đăng nhập hoặc email',
   `email` varchar(255) NOT NULL,
   `password_hash` varchar(255) NOT NULL COMMENT 'Bcrypt hash',
@@ -2783,7 +2783,7 @@ INSERT INTO `users` (`user_id`, `username`, `email`, `password_hash`, `role`, `f
 --
 
 CREATE TABLE `user_settings` (
-  `settings_id` int(11) NOT NULL,
+  `settings_id` int(11) NOT NULL PRIMARY KEY,
   `user_id` int(11) NOT NULL,
   `alert_district_id` int(11) DEFAULT NULL COMMENT 'Quận/huyện muốn nhận cảnh báo',
   `alert_threshold` int(11) DEFAULT 150 COMMENT 'Ngưỡng AQI để cảnh báo',
@@ -2812,20 +2812,7 @@ INSERT INTO `user_settings` (`settings_id`, `user_id`, `alert_district_id`, `ale
 -- Cấu trúc đóng vai cho view `v_latest_air_quality`
 -- (See below for the actual view)
 --
-CREATE TABLE `v_latest_air_quality` (
-`district_id` int(11)
-,`district_name` varchar(100)
-,`latitude` decimal(10,7)
-,`longitude` decimal(10,7)
-,`datetime` datetime
-,`pm25` decimal(8,2)
-,`pm10` decimal(8,2)
-,`temperature` decimal(5,2)
-,`humidity` decimal(5,2)
-,`aqi` int(11)
-,`pollution_level` varchar(50)
-,`aqi_color` varchar(7)
-);
+
 
 -- --------------------------------------------------------
 
@@ -2833,9 +2820,7 @@ CREATE TABLE `v_latest_air_quality` (
 -- Cấu trúc đóng vai cho view `v_pending_reports_count`
 -- (See below for the actual view)
 --
-CREATE TABLE `v_pending_reports_count` (
-`pending_count` bigint(21)
-);
+
 
 -- --------------------------------------------------------
 
@@ -2863,7 +2848,7 @@ CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW 
 -- Chỉ mục cho bảng `chat_history`
 --
 ALTER TABLE `chat_history`
-  ADD PRIMARY KEY (`chat_id`),
+
   ADD KEY `fk_chat_user` (`user_id`),
   ADD KEY `idx_user_created` (`user_id`,`created_at`);
 
@@ -2871,14 +2856,14 @@ ALTER TABLE `chat_history`
 -- Chỉ mục cho bảng `dim_aqi_scale`
 --
 ALTER TABLE `dim_aqi_scale`
-  ADD PRIMARY KEY (`aqi_level_id`),
+
   ADD KEY `idx_aqi_range` (`min_aqi`,`max_aqi`);
 
 --
 -- Chỉ mục cho bảng `dim_districts`
 --
 ALTER TABLE `dim_districts`
-  ADD PRIMARY KEY (`district_id`),
+
   ADD UNIQUE KEY `uk_district_name` (`name`),
   ADD KEY `idx_location` (`latitude`,`longitude`);
 
@@ -2886,14 +2871,14 @@ ALTER TABLE `dim_districts`
 -- Chỉ mục cho bảng `dim_pollution_types`
 --
 ALTER TABLE `dim_pollution_types`
-  ADD PRIMARY KEY (`type_id`),
+
   ADD UNIQUE KEY `uk_type_code` (`type_code`);
 
 --
 -- Chỉ mục cho bảng `fact_air_quality`
 --
 ALTER TABLE `fact_air_quality`
-  ADD PRIMARY KEY (`record_id`),
+
   ADD KEY `fk_air_quality_district` (`district_id`),
   ADD KEY `fk_air_quality_aqi_level` (`aqi_level_id`),
   ADD KEY `idx_datetime` (`datetime`),
@@ -2904,7 +2889,7 @@ ALTER TABLE `fact_air_quality`
 -- Chỉ mục cho bảng `fact_forecast`
 --
 ALTER TABLE `fact_forecast`
-  ADD PRIMARY KEY (`forecast_id`),
+
   ADD KEY `fk_forecast_district` (`district_id`),
   ADD KEY `fk_forecast_aqi_level` (`aqi_level_id`),
   ADD KEY `idx_forecast_datetime` (`forecast_datetime`),
@@ -2915,7 +2900,7 @@ ALTER TABLE `fact_forecast`
 -- Chỉ mục cho bảng `health_logs`
 --
 ALTER TABLE `health_logs`
-  ADD PRIMARY KEY (`log_id`),
+
   ADD KEY `fk_health_user` (`user_id`),
   ADD KEY `fk_health_district` (`district_id`),
   ADD KEY `idx_log_date` (`log_date`),
@@ -2925,7 +2910,7 @@ ALTER TABLE `health_logs`
 -- Chỉ mục cho bảng `newsletter_subscribers`
 --
 ALTER TABLE `newsletter_subscribers`
-  ADD PRIMARY KEY (`id`),
+
   ADD UNIQUE KEY `email` (`email`),
   ADD KEY `idx_email` (`email`),
   ADD KEY `idx_status` (`status`);
@@ -2934,7 +2919,7 @@ ALTER TABLE `newsletter_subscribers`
 -- Chỉ mục cho bảng `news_items`
 --
 ALTER TABLE `news_items`
-  ADD PRIMARY KEY (`news_id`),
+
   ADD KEY `idx_category` (`category`),
   ADD KEY `idx_published` (`is_published`,`published_at`);
 
@@ -2942,7 +2927,7 @@ ALTER TABLE `news_items`
 -- Chỉ mục cho bảng `pollution_reports`
 --
 ALTER TABLE `pollution_reports`
-  ADD PRIMARY KEY (`report_id`),
+
   ADD KEY `fk_report_user` (`user_id`),
   ADD KEY `fk_report_district` (`district_id`),
   ADD KEY `fk_report_type` (`type_id`),
@@ -2954,14 +2939,13 @@ ALTER TABLE `pollution_reports`
 --
 -- Chỉ mục cho bảng `system_settings`
 --
-ALTER TABLE `system_settings`
-  ADD PRIMARY KEY (`id`);
+
 
 --
 -- Chỉ mục cho bảng `users`
 --
 ALTER TABLE `users`
-  ADD PRIMARY KEY (`user_id`),
+
   ADD UNIQUE KEY `uk_email` (`email`),
   ADD UNIQUE KEY `uk_username` (`username`),
   ADD KEY `idx_role` (`role`),
@@ -2971,7 +2955,7 @@ ALTER TABLE `users`
 -- Chỉ mục cho bảng `user_settings`
 --
 ALTER TABLE `user_settings`
-  ADD PRIMARY KEY (`settings_id`),
+
   ADD UNIQUE KEY `uk_user_settings` (`user_id`),
   ADD KEY `fk_settings_district` (`alert_district_id`);
 
