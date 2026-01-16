@@ -1,16 +1,15 @@
 <?php
-// SMTP Debug - Brevo Specific
+// SMTP Debug - Brevo Specific v2.0
 header('Content-Type: text/plain');
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
-echo "=== SMTP DIAGNOSTICS (BREVO CHECK) ===\n";
+echo "=== CHECK DEPLOYMENT VERSION: 2.0 (NEW) ===\n"; // Header indicator
 echo "Date: " . date('Y-m-d H:i:s') . "\n";
 
 $targets = [
     'smtp-relay.brevo.com' => [587, 2525, 465],
-    'smtp.gmail.com' => [587, 465],
-    'smtp.sendgrid.net' => [2525] // Control test
+    'smtp.sendgrid.net' => [2525]
 ];
 
 foreach ($targets as $host => $ports) {
