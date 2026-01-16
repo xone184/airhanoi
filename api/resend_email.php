@@ -145,15 +145,26 @@ function sendEmailViaPHPMailer($to, $subject, $htmlBody)
     try {
         // Server settings
         $mail->isSMTP();
-        // Force IPv4 Resolution using Googlemail alias
-        $mail->Host = gethostbyname('smtp.googlemail.com');
+
+        // Dynamic SMTP Configuration (Supports Brevo/SendGrid)
+        $smtpHost = getenv('SMTP_HOST') ?: 'smtp.googlemail.com';
+        $smtpPort = getenv('SMTP_PORT') ?: 587;
+
+        // Use Hostname directly (Better for Relays/Load Balancers)
+        $mail->Host = $smtpHost;
+
         $mail->SMTPAuth = true;
+        // Use MAIL_USER/PASS env vars (User updates these on Render)
         $mail->Username = MAIL_USER;
         $mail->Password = MAIL_PASS;
 
-        // Standard STARTTLS settings
+        // Security
         $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-        $mail->Port = 587;
+        $mail->Port = $smtpPort;
+
+        // Standard STARTTLS settings (now handled above)
+        // $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+        // $mail->Port = 587;
 
         $mail->SMTPOptions = array(
             'ssl' => array(

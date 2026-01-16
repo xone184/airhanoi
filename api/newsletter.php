@@ -172,15 +172,22 @@ function sendWelcomeEmail($to)
     try {
         // Server settings
         $mail->isSMTP();
-        // Force IPv4 Resolution using Googlemail alias
-        $mail->Host = gethostbyname('smtp.googlemail.com');
+
+        // Dynamic SMTP Configuration (Supports Brevo/SendGrid)
+        $smtpHost = getenv('SMTP_HOST') ?: 'smtp.googlemail.com';
+        $smtpPort = getenv('SMTP_PORT') ?: 587;
+
+        // Use Hostname directly
+        $mail->Host = $smtpHost;
+
         $mail->SMTPAuth = true;
-        // Use credentials from mail_config.php 
+        // Use credentials from mail_config.php or Env Vars
         $mail->Username = defined('MAIL_USER') ? MAIL_USER : '';
         $mail->Password = defined('MAIL_PASS') ? MAIL_PASS : '';
-        // Revert to 587/STARTTLS with IPv4 fix
+
+        // Standard STARTTLS settings
         $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-        $mail->Port = 587;
+        $mail->Port = $smtpPort;
 
         $mail->SMTPOptions = array(
             'ssl' => array(
