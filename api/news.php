@@ -159,9 +159,16 @@ function insertNewsItem($item)
 {
     global $db;
 
+    // Truncate long URLs to fit database column (max 500 chars for safety)
+    $url = substr($item['url'] ?? '', 0, 500);
+    $imageUrl = substr($item['imageUrl'] ?? '', 0, 500);
+    $title = substr($item['title'] ?? '', 0, 500);
+    $summary = substr($item['summary'] ?? '', 0, 1000);
+    $author = substr($item['author'] ?? '', 0, 100);
+
     // Check if URL exists
     $stmt = $db->prepare("SELECT 1 FROM news_items WHERE external_url = ?");
-    $stmt->execute([$item['url']]);
+    $stmt->execute([$url]);
     if ($stmt->fetch()) {
         return false; // Skip if already exists
     }
@@ -173,12 +180,12 @@ function insertNewsItem($item)
     ");
 
     return $stmt->execute([
-        sanitize($item['title']),
-        sanitize($item['summary']),
-        sanitize($item['category']),
-        sanitize($item['imageUrl']),
-        sanitize($item['author']),
-        sanitize($item['url']),
+        sanitize($title),
+        sanitize($summary),
+        sanitize($item['category'] ?? 'news'),
+        sanitize($imageUrl),
+        sanitize($author),
+        sanitize($url),
         $item['date']
     ]);
 }
