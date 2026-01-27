@@ -574,33 +574,37 @@ const Dashboard: React.FC<DashboardProps> = ({ data, forecastData, temperatureUn
                         Phân Bố Mức Độ Ô Nhiễm
                     </h3>
                     <div className="h-48 flex items-center justify-center">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                                <Pie
-                                    data={distributionData}
-                                    cx="50%"
-                                    cy="50%"
-                                    innerRadius={70}
-                                    outerRadius={90}
-                                    paddingAngle={5}
-                                    dataKey="value"
-                                    stroke="none"
-                                >
-                                    {distributionData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={entry.color} />
-                                    ))}
-                                </Pie>
-                                <Tooltip
-                                    contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.9)', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '12px', color: '#f8fafc' }}
-                                />
-                                <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="fill-white font-black text-2xl">
-                                    {data.length}
-                                </text>
-                                <text x="50%" y="60%" textAnchor="middle" dominantBaseline="middle" className="fill-slate-400 text-xs uppercase tracking-wider">
-                                    Khu vực
-                                </text>
-                            </PieChart>
-                        </ResponsiveContainer>
+                        {distributionData.length > 0 ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie
+                                        data={distributionData}
+                                        cx="50%"
+                                        cy="50%"
+                                        innerRadius={70}
+                                        outerRadius={90}
+                                        paddingAngle={5}
+                                        dataKey="value"
+                                        stroke="none"
+                                    >
+                                        {distributionData.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={entry.color} />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip
+                                        contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.9)', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '12px', color: '#f8fafc' }}
+                                    />
+                                    <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="fill-white font-black text-2xl">
+                                        {data.length}
+                                    </text>
+                                    <text x="50%" y="60%" textAnchor="middle" dominantBaseline="middle" className="fill-slate-400 text-xs uppercase tracking-wider">
+                                        Khu vực
+                                    </text>
+                                </PieChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="text-slate-500 text-sm italic">Đang tải dữ liệu...</div>
+                        )}
 
                         {/* Custom Legend */}
                         <div className="ml-8 space-y-3">
