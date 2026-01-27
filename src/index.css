@@ -274,3 +274,13 @@ body.light-mode .bg-invariant-slate-900,
 body.light-mode .leaflet-container {
   background: #f1f5f9;
 }
+
+/* Hide scrollbar for horizontal scroll filters */
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}

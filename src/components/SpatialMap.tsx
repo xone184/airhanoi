@@ -338,94 +338,97 @@ const SpatialMap: React.FC<SpatialMapProps> = ({ data }) => {
             {/* CONTROL PANEL CONTAINER */}
             {/* Mobile: Bottom Sheet (Fixed Bottom). Desktop: Top-Right Absolute */}
             <div className={`
-                z-[400] flex flex-col gap-3 transition-all duration-300 ease-in-out
+                z-[400] flex flex-col gap-2 transition-all duration-300 ease-in-out
                 
                 /* DESKTOP STYLES */
                 lg:absolute lg:top-4 lg:right-4 lg:items-end lg:w-auto lg:h-auto lg:visible lg:opacity-100 lg:translate-y-0 lg:bg-transparent lg:p-0 lg:shadow-none lg:rounded-none
 
                 /* MOBILE STYLES (Bottom Sheet) */
-                fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl p-5 shadow-[0_-5px_30px_rgba(0,0,0,0.15)]
-                max-h-[85vh] overflow-y-auto
+                fixed bottom-0 left-0 right-0 bg-white rounded-t-2xl p-4 shadow-[0_-5px_30px_rgba(0,0,0,0.15)]
+                max-h-[60vh] overflow-y-auto
                 ${showMobileControls
                     ? 'translate-y-0 visible opacity-100'
                     : 'translate-y-full invisible opacity-0 lg:translate-y-0 lg:visible lg:opacity-100'}
             `}>
 
                 {/* Mobile Handle Bar */}
-                <div className="lg:hidden w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-2"></div>
+                <div className="lg:hidden w-10 h-1 bg-slate-300 rounded-full mx-auto mb-1"></div>
 
                 {/* 1. Map Style Selector Pattern */}
-                <div className="bg-slate-50 lg:bg-white/95 lg:backdrop-blur-md p-3 rounded-2xl lg:shadow-xl border border-slate-200/60 lg:border-slate-200">
-                    <div className="flex items-center gap-2 mb-3 px-1">
-                        <Layers size={16} className="text-slate-500" />
-                        <span className="text-xs font-bold text-slate-700 uppercase">Loại bản đồ</span>
+                <div className="bg-slate-50 lg:bg-white/95 lg:backdrop-blur-md p-2.5 rounded-xl lg:shadow-xl border border-slate-200/60 lg:border-slate-200">
+                    <div className="flex items-center gap-2 mb-2 px-1">
+                        <Layers size={14} className="text-slate-500" />
+                        <span className="text-[10px] font-bold text-slate-600 uppercase">Loại bản đồ</span>
                     </div>
-                    <div className="flex gap-2 justify-between lg:justify-end">
+                    <div className="flex gap-1.5 justify-between lg:justify-end">
                         {(Object.keys(mapStyles) as Array<keyof typeof mapStyles>).map((style) => (
                             <button
                                 key={style}
                                 onClick={() => setMapStyle(style)}
-                                className={`flex flex-col items-center gap-1 p-2 rounded-xl border transition-all flex-1 lg:flex-none lg:w-16
+                                className={`flex flex-col items-center gap-0.5 p-1.5 rounded-lg border transition-all flex-1 lg:flex-none lg:w-14
                                     ${mapStyle === style
                                         ? 'bg-white border-blue-500 shadow-sm lg:bg-slate-100 lg:shadow-inner'
                                         : 'border-transparent hover:bg-white/50'
                                     }`}
                             >
-                                <div className={`w-10 h-10 lg:w-8 lg:h-8 rounded-full border-2 ${mapStyle === style ? 'border-blue-500' : 'border-slate-300'}`} style={{ background: mapStyles[style].color }}></div>
-                                <span className={`text-[10px] lg:text-[9px] font-bold ${mapStyle === style ? 'text-blue-600' : 'text-slate-500'}`}>{mapStyles[style].label}</span>
+                                <div className={`w-7 h-7 lg:w-6 lg:h-6 rounded-full border-2 ${mapStyle === style ? 'border-blue-500' : 'border-slate-300'}`} style={{ background: mapStyles[style].color }}></div>
+                                <span className={`text-[9px] font-bold ${mapStyle === style ? 'text-blue-600' : 'text-slate-500'}`}>{mapStyles[style].label}</span>
                             </button>
                         ))}
                     </div>
                 </div>
 
-                {/* 2. Filter Control */}
-                <div className="bg-slate-50 lg:bg-white/95 lg:backdrop-blur-md p-3 rounded-2xl lg:shadow-xl border border-slate-200/60 lg:border-slate-200">
-                    <div className="flex items-center gap-2 mb-3 px-1">
-                        <Filter size={16} className="text-slate-500" />
-                        <span className="text-xs font-bold text-slate-700 uppercase">Bộ lọc AQI</span>
+                {/* 2. Filter Control - Horizontal Scroll on Mobile */}
+                <div className="bg-slate-50 lg:bg-white/95 lg:backdrop-blur-md p-2.5 rounded-xl lg:shadow-xl border border-slate-200/60 lg:border-slate-200">
+                    <div className="flex items-center gap-2 mb-2 px-1">
+                        <Filter size={14} className="text-slate-500" />
+                        <span className="text-[10px] font-bold text-slate-600 uppercase">Lọc AQI</span>
                     </div>
-                    {/* Grid on Mobile, Column on Desktop */}
-                    <div className="grid grid-cols-2 lg:flex lg:flex-col gap-2 lg:gap-1.5 min-w-[140px]">
+                    {/* Horizontal Scroll on Mobile, Column on Desktop */}
+                    <div className="flex gap-1.5 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible hide-scrollbar">
                         {filters.map(f => (
                             <button
                                 key={f.id}
-                                onClick={() => setFilterLevel(f.id)}
-                                className={`flex items-center justify-between px-3 py-2.5 lg:py-2 rounded-xl text-xs font-bold transition-all border
+                                onClick={() => {
+                                    setFilterLevel(f.id);
+                                    setShowMobileControls(false); // Close on selection for mobile
+                                }}
+                                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all border whitespace-nowrap shrink-0
                                     ${filterLevel === f.id
-                                        ? 'bg-slate-800 text-white border-slate-800 shadow-md transform scale-[1.02]'
+                                        ? 'bg-slate-800 text-white border-slate-800'
                                         : 'bg-white text-slate-600 border-slate-100 hover:bg-slate-50'
                                     }`}
                             >
-                                <span>{f.label.split('(')[0]}</span>
                                 {f.id !== 'all' && (
-                                    <span className="w-3 h-3 lg:w-2.5 lg:h-2.5 rounded-full shrink-0 ml-2" style={{ backgroundColor: f.color }}></span>
+                                    <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: f.color }}></span>
                                 )}
+                                <span>{f.label.split('(')[0].trim()}</span>
                             </button>
                         ))}
                     </div>
                 </div>
 
                 {/* 3. Real-time Location Tracking */}
-                <div className="bg-slate-50 lg:bg-white/95 lg:backdrop-blur-md p-3 rounded-2xl lg:shadow-xl border border-slate-200/60 lg:border-slate-200 w-full lg:max-w-[250px] pointer-events-auto">
+                <div className="bg-slate-50 lg:bg-white/95 lg:backdrop-blur-md p-2.5 rounded-xl lg:shadow-xl border border-slate-200/60 lg:border-slate-200 w-full lg:max-w-[250px] pointer-events-auto">
                     <button
                         onClick={isTracking ? stopTracking : startTracking}
-                        className={`w-full flex items-center justify-center gap-2 px-3 py-3 lg:py-2 rounded-xl text-xs font-bold transition-all border shadow-sm
+                        className={`w-full flex items-center justify-center gap-2 px-3 py-2.5 lg:py-2 rounded-lg text-[11px] font-bold transition-all border shadow-sm
                             ${isTracking
                                 ? 'bg-red-500 text-white border-red-500'
                                 : 'bg-blue-500 text-white border-blue-500 hover:bg-blue-600'
                             }`}
                     >
-                        <MapPin size={16} className="lg:w-3.5 lg:h-3.5" />
+                        <MapPin size={14} className="lg:w-3.5 lg:h-3.5" />
                         {isTracking ? 'Dừng Theo Dõi' : 'Vị Trí Của Tôi'}
                     </button>
                     {trackingError && (
-                        <div className="mt-2 text-xs text-red-600 bg-red-100 p-2 rounded-lg flex items-start gap-2 text-left animate-fade-in">
-                            <XCircle size={14} className="mt-0.5 shrink-0" /> <span className="break-words w-full">{trackingError}</span>
+                        <div className="mt-2 text-[10px] text-red-600 bg-red-100 p-2 rounded-lg flex items-start gap-1.5 text-left animate-fade-in">
+                            <XCircle size={12} className="mt-0.5 shrink-0" /> <span className="break-words w-full leading-tight">{trackingError}</span>
                         </div>
                     )}
                 </div>
 
-                <div className="lg:bg-white/90 lg:backdrop-blur-md px-4 py-2 rounded-full lg:shadow-lg lg:border border-slate-200 text-xs font-bold text-slate-400 lg:text-slate-600 text-center self-center lg:self-end">
+                <div className="lg:bg-white/90 lg:backdrop-blur-md px-3 py-1.5 rounded-full lg:shadow-lg lg:border border-slate-200 text-[10px] font-bold text-slate-400 lg:text-slate-600 text-center self-center lg:self-end">
                     {filteredData.length} điểm quan trắc
                 </div>
             </div>
