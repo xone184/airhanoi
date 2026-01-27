@@ -506,7 +506,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, forecastData, temperatureUn
                     />
 
                     {/* Forecast Mini-Widget */}
-                    <div className="col-span-2 md:col-span-4 glass-panel rounded-2xl p-4 flex flex-col justify-between animate-fade-in-up" style={{ animationDelay: '500ms' }}>
+                    <div className="col-span-2 md:col-span-4 glass-panel rounded-xl p-4 flex flex-col justify-between animate-fade-in-up" style={{ animationDelay: '500ms' }}>
                         <div className="flex justify-between items-center mb-2">
                             <h3 className="text-white font-bold flex items-center gap-2 text-sm">
                                 <TrendingUp size={16} className="text-emerald-400" />
@@ -568,7 +568,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, forecastData, temperatureUn
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
                 {/* Distribution Chart */}
-                <div className="glass-panel rounded-2xl p-4 animate-fade-in-up" style={{ animationDelay: '600ms' }}>
+                <div className="glass-panel rounded-xl p-4 animate-fade-in-up" style={{ animationDelay: '600ms' }}>
                     <h3 className="text-base font-bold text-white mb-3 flex items-center gap-2">
                         <MapPin size={16} className="text-blue-400" />
                         Phân Bố Mức Độ Ô Nhiễm
@@ -616,7 +616,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, forecastData, temperatureUn
                 </div>
 
                 {/* Top 5 Comparison Chart */}
-                <div className="glass-panel rounded-2xl p-4 animate-fade-in-up" style={{ animationDelay: '700ms' }}>
+                <div className="glass-panel rounded-xl p-4 animate-fade-in-up" style={{ animationDelay: '700ms' }}>
                     <h3 className="text-base font-bold text-white mb-3 flex items-center gap-2">
                         <Activity size={16} className="text-red-400" />
                         Top 5 Khu Vực Ô Nhiễm Nhất
@@ -675,7 +675,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, forecastData, temperatureUn
                     {/* Module 1: UV Index */}
                     <div
                         onClick={openWeatherPage}
-                        className="glass-panel rounded-2xl p-4 relative group overflow-hidden hover:border-yellow-500/30 transition-all cursor-pointer"
+                        className="glass-panel rounded-xl p-4 relative group overflow-hidden hover:border-yellow-500/30 transition-all cursor-pointer"
                     >
                         <div className="absolute top-0 right-0 w-20 h-20 bg-yellow-500/10 rounded-bl-full -mr-5 -mt-5 transition-all group-hover:bg-yellow-500/20"></div>
                         <div className="flex justify-between items-start mb-4">
@@ -709,7 +709,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, forecastData, temperatureUn
                     {/* Module 2: Wind Speed */}
                     <div
                         onClick={openWeatherPage}
-                        className="glass-panel rounded-2xl p-4 relative group overflow-hidden hover:border-cyan-500/30 transition-all cursor-pointer"
+                        className="glass-panel rounded-xl p-4 relative group overflow-hidden hover:border-cyan-500/30 transition-all cursor-pointer"
                     >
                         <div className="absolute top-0 right-0 w-20 h-20 bg-cyan-500/10 rounded-bl-full -mr-5 -mt-5 transition-all group-hover:bg-cyan-500/20"></div>
                         <div className="flex justify-between items-start mb-4">
@@ -732,7 +732,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, forecastData, temperatureUn
                     </div>
 
                     {/* Module 3: Export Data */}
-                    <div className="glass-panel rounded-2xl p-4 flex flex-col justify-center items-center text-center relative group hover:border-blue-500/30 transition-all">
+                    <div className="glass-panel rounded-xl p-4 flex flex-col justify-center items-center text-center relative group hover:border-blue-500/30 transition-all">
                         <div className="absolute inset-0 bg-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
                         <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform border border-slate-700 relative z-10">
                             <FileDown size={32} className="text-blue-400" />
@@ -752,7 +752,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, forecastData, temperatureUn
 
             {/* --- FOOTER --- */}
             <footer className="mt-6 pt-4 border-t border-slate-700/50">
-                <div className="glass-panel rounded-2xl p-5">
+                <div className="glass-panel rounded-xl p-5">
                     <div className="flex flex-col lg:flex-row justify-between items-center gap-4">
                         {/* Brand */}
                         <div className="text-center lg:text-left">
@@ -825,7 +825,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, forecastData, temperatureUn
 // --- Sub Components ---
 
 const StatBox = memo(({ icon, title, value, unit, color, bg, sub }: any) => (
-    <div className="glass-panel rounded-2xl p-5 hover:border-white/20 transition-all duration-300 group">
+    <div className="glass-panel rounded-xl p-5 hover:border-white/20 transition-all duration-300 group">
         <div className="flex justify-between items-start mb-3">
             <div className={`p-2.5 rounded-xl ${bg} ${color} group-hover:scale-110 transition-transform`}>{icon}</div>
         </div>
@@ -841,7 +841,7 @@ const StatBox = memo(({ icon, title, value, unit, color, bg, sub }: any) => (
 ));
 
 const DistrictList = memo(({ title, icon, data }: any) => (
-    <div className="glass-panel rounded-2xl p-4">
+    <div className="glass-panel rounded-xl p-4">
         <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
             {icon} {title}
         </h3>

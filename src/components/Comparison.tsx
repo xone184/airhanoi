@@ -39,7 +39,7 @@ const Comparison: React.FC<ComparisonProps> = ({ data }) => {
             </header>
 
             {/* Selectors */}
-            <div className="glass-panel p-4 rounded-2xl mb-4 flex flex-col md:flex-row items-center justify-between gap-4 relative">
+            <div className="glass-panel p-4 rounded-xl mb-4 flex flex-col md:flex-row items-center justify-between gap-4 relative">
                 <div className="w-full md:w-1/3">
                     <label className="block text-slate-400 text-sm font-bold mb-2">Khu vực A</label>
                     <div className="relative">
@@ -74,14 +74,14 @@ const Comparison: React.FC<ComparisonProps> = ({ data }) => {
             </div>
 
             {districtA === districtB ? (
-                <div className="p-8 text-center border-2 border-dashed border-slate-700 rounded-2xl">
+                <div className="p-8 text-center border-2 border-dashed border-slate-700 rounded-xl">
                     <AlertTriangle className="mx-auto text-yellow-500 mb-2" size={32} />
                     <p className="text-slate-400">Vui lòng chọn hai khu vực khác nhau để so sánh.</p>
                 </div>
             ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                     {/* Left Card: District A */}
-                    <div className="glass-panel rounded-2xl p-6 border-t-4 border-t-blue-500">
+                    <div className="glass-panel rounded-xl p-6 border-t-4 border-t-blue-500">
                         <h2 className="text-2xl font-bold text-white mb-1">{dataA.district}</h2>
                         <p className="text-blue-400 text-sm font-bold mb-6">Khu vực A</p>
 
@@ -108,7 +108,7 @@ const Comparison: React.FC<ComparisonProps> = ({ data }) => {
                     {/* Middle: Stats & Verdict */}
                     <div className="flex flex-col gap-4">
                         {/* Winner Card */}
-                        <div className="bg-gradient-to-br from-emerald-900 to-slate-900 p-6 rounded-2xl border border-emerald-500/30 text-center shadow-lg relative overflow-hidden">
+                        <div className="bg-gradient-to-br from-emerald-900 to-slate-900 p-6 rounded-xl border border-emerald-500/30 text-center shadow-lg relative overflow-hidden">
                             <div className="absolute top-0 right-0 p-4 opacity-10"><Trophy size={80} /></div>
                             <h3 className="text-emerald-300 font-bold uppercase text-xs tracking-widest mb-2">Không khí sạch hơn tại</h3>
                             <h2 className="text-2xl font-bold text-white mb-2 text-invariant-white">{winner.district}</h2>
@@ -118,7 +118,7 @@ const Comparison: React.FC<ComparisonProps> = ({ data }) => {
                         </div>
 
                         {/* Chart */}
-                        <div className="glass-panel rounded-2xl p-4">
+                        <div className="glass-panel rounded-xl p-4">
                             <h4 className="text-center text-slate-300 font-bold text-sm mb-4">Biểu đồ so sánh chỉ số</h4>
                             <div className="h-[300px] w-full">
                                 <ResponsiveContainer width="100%" height="100%">
@@ -137,7 +137,7 @@ const Comparison: React.FC<ComparisonProps> = ({ data }) => {
                     </div>
 
                     {/* Right Card: District B */}
-                    <div className="glass-panel rounded-2xl p-6 border-t-4 border-t-purple-500">
+                    <div className="glass-panel rounded-xl p-6 border-t-4 border-t-purple-500">
                         <h2 className="text-2xl font-bold text-white mb-1">{dataB.district}</h2>
                         <p className="text-purple-400 text-sm font-bold mb-6">Khu vực B</p>
 
@@ -165,7 +165,7 @@ const Comparison: React.FC<ComparisonProps> = ({ data }) => {
 
             {/* Metric Breakdown Table */}
             {districtA !== districtB && (
-                <div className="mt-4 bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden">
+                <div className="mt-4 bg-slate-900 rounded-xl border border-slate-700 overflow-hidden">
                     <table className="w-full text-center">
                         <thead className="bg-slate-900 text-slate-400 text-xs font-bold uppercase tracking-wider">
                             <tr>

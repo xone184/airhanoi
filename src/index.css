@@ -3,14 +3,14 @@
 @tailwind utilities;
 
 :root {
-  /* Default Dark Mode Variables */
-  --glass-bg: rgba(15, 23, 42, 0.65);
-  /* Dark Slate transparent */
-  --glass-border: rgba(255, 255, 255, 0.08);
-  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  /* Default Dark Mode Variables - Darker for professional look */
+  --glass-bg: rgba(10, 15, 30, 0.9);
+  /* Darker, more opaque background */
+  --glass-border: rgba(100, 116, 139, 0.25);
+  --glass-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.5);
   --text-primary: #f8fafc;
   --text-secondary: #94a3b8;
-  --input-bg: rgba(15, 23, 42, 0.5);
+  --input-bg: rgba(15, 23, 42, 0.8);
 }
 
 body {
@@ -250,11 +250,11 @@ body.light-mode .bg-invariant-slate-900,
 
 .glass-panel {
   background: var(--glass-bg);
-  /* Reduced blur from 6px to 3px for better scroll FPS */
-  backdrop-filter: blur(3px);
-  -webkit-backdrop-filter: blur(3px);
-  border: 1px solid rgba(148, 163, 184, 0.4);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  /* Reduced blur to improve scroll FPS and darken overall feel */
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
   transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 

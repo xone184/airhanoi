@@ -243,7 +243,7 @@ const HealthAdvice: React.FC<HealthAdviceProps> = ({ data }) => {
             </header>
 
             {/* Main Status Card */}
-            <div className={`rounded-2xl p-6 border ${status.bg} ${status.border} mb-4 flex flex-col md:flex-row items-center gap-4 text-center md:text-left shadow-xl`}>
+            <div className={`rounded-xl p-6 border ${status.bg} ${status.border} mb-4 flex flex-col md:flex-row items-center gap-4 text-center md:text-left shadow-xl`}>
                 <div className="w-24 h-24 rounded-full bg-slate-900 flex items-center justify-center border-4 border-slate-700 relative flex-shrink-0">
                     <Heart size={40} className={status.color} />
                     <div className={`absolute -top-1 -right-1 w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs text-slate-900 ${status.color.replace('text-', 'bg-')}`}>
@@ -262,7 +262,7 @@ const HealthAdvice: React.FC<HealthAdviceProps> = ({ data }) => {
                     <div
                         key={index}
                         onClick={() => setSelectedCard(index)}
-                        className={`bg-slate-800/80 backdrop-blur-sm rounded-2xl p-6 border border-slate-700 shadow-lg 
+                        className={`bg-slate-900 backdrop-blur-sm rounded-xl p-6 border border-slate-700 shadow-lg 
                                     hover:border-blue-500/50 hover:bg-slate-800 hover:scale-[1.02] hover:shadow-xl
                                     transition-all duration-300 cursor-pointer group relative overflow-hidden`}
                     >
@@ -300,7 +300,7 @@ const HealthAdvice: React.FC<HealthAdviceProps> = ({ data }) => {
             </div>
 
             {/* Note */}
-            <div className="mt-4 p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl flex gap-3">
+            <div className="mt-4 p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg flex gap-3">
                 <AlertTriangle className="text-blue-400 flex-shrink-0" size={20} />
                 <p className="text-sm text-blue-200">
                     Lưu ý: Các khuyến nghị này mang tính chất tham khảo chung. Nếu bạn có bệnh lý hô hấp, hãy tuân theo chỉ dẫn của bác sĩ.
@@ -314,7 +314,7 @@ const HealthAdvice: React.FC<HealthAdviceProps> = ({ data }) => {
                     onClick={closeModal}
                 >
                     <div
-                        className="bg-slate-900 border border-slate-700 rounded-3xl max-w-2xl w-full max-h-[85vh] overflow-hidden shadow-2xl animate-scale-in"
+                        className="bg-slate-900 border border-slate-700 rounded-xl max-w-2xl w-full max-h-[85vh] overflow-hidden shadow-2xl animate-scale-in"
                         onClick={e => e.stopPropagation()}
                     >
                         {/* Modal Header */}
