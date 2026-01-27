@@ -110,7 +110,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ data }) => {
                 <p className="text-slate-400">Hỏi đáp với dữ liệu Realtime</p>
             </header>
 
-            <div className="flex-1 bg-slate-800 rounded-2xl border border-slate-700 shadow-xl overflow-hidden flex flex-col">
+            <div className="flex-1 bg-slate-800 rounded-xl border border-slate-700 shadow-xl overflow-hidden flex flex-col chatbot-container">
                 {/* Messages Area */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-6">
                     {messages.map((msg) => (

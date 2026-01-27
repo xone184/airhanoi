@@ -118,6 +118,22 @@ body.light-mode .bg-white\/10 {
   border-color: rgba(0, 0, 0, 0.05) !important;
 }
 
+/* ChatBot Light Mode - Solid backgrounds for readability */
+body.light-mode .chatbot-container {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15) !important;
+}
+
+body.light-mode .chatbot-container .bg-slate-700 {
+  background-color: #e2e8f0 !important;
+  color: #1e293b !important;
+}
+
+body.light-mode .chatbot-container .bg-slate-900\/50 {
+  background-color: rgba(241, 245, 249, 0.95) !important;
+}
+
 body.light-mode input,
 body.light-mode select,
 body.light-mode textarea,
