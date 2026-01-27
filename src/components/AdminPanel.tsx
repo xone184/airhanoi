@@ -1149,7 +1149,14 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                                 </h4>
                                 <div className="w-full h-48 bg-slate-800 rounded-xl border border-slate-700 border-dashed flex items-center justify-center flex-col gap-2">
                                     {viewingReport.image_url ? (
-                                        <img src={viewingReport.image_url} alt="Evidence" className="h-full w-full object-contain rounded-xl" />
+                                        <img
+                                            src={(viewingReport.image_url.startsWith('http') ? viewingReport.image_url : (import.meta.env.VITE_API_BASE_URL || 'http://localhost/hanoi-air-quality-monitor/api').replace(/\/api\/?$/, '') + '/' + viewingReport.image_url)}
+                                            alt="Evidence"
+                                            className="h-full w-full object-contain rounded-xl"
+                                            onError={(e) => {
+                                                (e.target as HTMLImageElement).src = 'https://placehold.co/600x400?text=Image+Not+Found';
+                                            }}
+                                        />
                                     ) : (
                                         <>
                                             <div className="w-12 h-12 bg-slate-700 rounded-full flex items-center justify-center text-slate-500">
