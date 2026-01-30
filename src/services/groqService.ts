@@ -101,6 +101,9 @@ const searchWeb = async (query: string, type: 'general' | 'news' = 'news'): Prom
         ? `${import.meta.env.VITE_API_BASE_URL}/web_search.php`
         : "http://localhost/airhanoi/api/web_search.php";
 
+    console.log("🔍 [WebSearch] Calling API:", API_URL);
+    console.log("🔍 [WebSearch] Query:", query, "Type:", type);
+
     try {
         const response = await fetch(API_URL, {
             method: 'POST',
@@ -108,15 +111,26 @@ const searchWeb = async (query: string, type: 'general' | 'news' = 'news'): Prom
             body: JSON.stringify({ query, type, max_results: 5 })
         });
 
+        console.log("🔍 [WebSearch] Response status:", response.status);
+
         if (!response.ok) {
-            console.warn('Web search failed:', response.status);
+            const errorText = await response.text();
+            console.warn('🔍 [WebSearch] Failed:', response.status, errorText);
             return [];
         }
 
         const data = await response.json();
-        return data.success ? data.data.results : [];
+        console.log("🔍 [WebSearch] Raw response:", data);
+
+        // Handle different response formats
+        const results = data.success && data.data?.results
+            ? data.data.results
+            : (data.results || []);
+
+        console.log("🔍 [WebSearch] Parsed results:", results.length, "items");
+        return results;
     } catch (error) {
-        console.warn('Web search error:', error);
+        console.error('🔍 [WebSearch] Error:', error);
         return [];
     }
 };
