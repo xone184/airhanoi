@@ -88,6 +88,52 @@ interface AIResponse {
     sources?: { title: string; url: string }[];
 }
 
+interface SearchResult {
+    title: string;
+    url: string;
+    snippet: string;
+    score: number;
+}
+
+// Web Search function using Tavily API
+const searchWeb = async (query: string, type: 'general' | 'news' = 'news'): Promise<SearchResult[]> => {
+    const API_URL = import.meta.env.VITE_API_BASE_URL
+        ? `${import.meta.env.VITE_API_BASE_URL}/web_search.php`
+        : "http://localhost/airhanoi/api/web_search.php";
+
+    try {
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query, type, max_results: 5 })
+        });
+
+        if (!response.ok) {
+            console.warn('Web search failed:', response.status);
+            return [];
+        }
+
+        const data = await response.json();
+        return data.success ? data.data.results : [];
+    } catch (error) {
+        console.warn('Web search error:', error);
+        return [];
+    }
+};
+
+// Detect if query needs web search
+const needsWebSearch = (query: string): boolean => {
+    const searchKeywords = [
+        'tin tức', 'news', 'mới nhất', 'hôm nay', 'gần đây',
+        'theo báo', 'thông tin', 'cập nhật', 'sự kiện',
+        'reddit', 'google', 'internet', 'trực tuyến',
+        'nghiên cứu', 'báo cáo', 'dự báo thời tiết',
+        'chính sách', 'quy định', 'luật', 'biện pháp'
+    ];
+    const lowerQuery = query.toLowerCase();
+    return searchKeywords.some(keyword => lowerQuery.includes(keyword));
+};
+
 export const generateAIResponse = async (
     question: string,
     contextData: DistrictData[],
@@ -103,6 +149,26 @@ export const generateAIResponse = async (
     const topPolluted = [...contextData].sort((a, b) => b.aqi - a.aqi).slice(0, 5);
     const topClean = [...contextData].sort((a, b) => a.aqi - b.aqi).slice(0, 5);
 
+    // Web search if needed
+    let webResults: SearchResult[] = [];
+    let webSearchContext = '';
+
+    if (needsWebSearch(question)) {
+        console.log("🔍 Performing web search for:", question);
+        webResults = await searchWeb(question, 'news');
+
+        if (webResults.length > 0) {
+            webSearchContext = `
+🌐 THÔNG TIN TỪ INTERNET (Nguồn tin mới nhất):
+${webResults.map((r, i) => `${i + 1}. [${r.title}]
+   📝 ${r.snippet.substring(0, 200)}...
+   🔗 ${r.url}`).join('\n\n')}
+
+⚠️ LƯU Ý: Khi sử dụng thông tin từ internet, hãy trích dẫn nguồn bằng cách ghi [Nguồn: tên bài viết].
+`;
+        }
+    }
+
     const dataSummary = `
 📊 THỐNG KÊ TỔNG QUAN (${contextData.length} khu vực):
 - AQI trung bình: ${avgAQI}
@@ -116,21 +182,23 @@ ${topClean.map((d, i) => `${i + 1}. ${d.district}: AQI ${d.aqi} (${d.pollution_l
 
 📋 CHI TIẾT TẤT CẢ KHU VỰC:
 ${contextData.map(d => `${d.district}: AQI ${d.aqi}, PM2.5: ${d.pm25}, Nhiệt độ: ${d.temperature}°C, Độ ẩm: ${d.humidity}%`).join('\n')}
-`;
+${webSearchContext}`;
 
     const systemPrompt = `Bạn là trợ lý AI chuyên gia về chất lượng không khí tại Hà Nội tên là "AirHanoi AI".
 
 🎯 NHIỆM VỤ:
 - Phân tích và trả lời câu hỏi dựa trên DỮ LIỆU THỜI GIAN THỰC bên dưới
+- Nếu có thông tin từ internet, hãy tham khảo và trích dẫn nguồn
 - Đưa ra lời khuyên sức khỏe cụ thể, hữu ích
 - Trả lời bằng ngôn ngữ người dùng sử dụng (Tiếng Việt hoặc Tiếng Anh)
 
 📝 QUY TẮC:
-- Trả lời ngắn gọn, súc tích (tối đa 200 từ)
+- Trả lời ngắn gọn, súc tích (tối đa 300 từ)
 - Sử dụng emoji phù hợp để dễ đọc
 - Ưu tiên dữ liệu được cung cấp, không bịa số liệu
 - Nếu được hỏi về khu vực cụ thể, tìm trong dữ liệu và trả lời chính xác
 - Đưa ra cảnh báo sức khỏe khi AQI > 100
+- Khi trích dẫn thông tin từ internet, ghi rõ [Nguồn: tên nguồn]
 
 ${dataSummary}`;
 
@@ -138,7 +206,14 @@ ${dataSummary}`;
 
     try {
         const text = await callGroqChat(systemPrompt, userPrompt, onChunk);
-        return { text, sources: [] };
+
+        // Return with sources from web search
+        const sources = webResults.map(r => ({
+            title: r.title,
+            url: r.url
+        }));
+
+        return { text, sources };
     } catch (error: any) {
         console.error("Groq Chat Error:", error);
         return {
