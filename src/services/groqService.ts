@@ -145,7 +145,9 @@ const needsWebSearch = (query: string): boolean => {
         'chính sách', 'quy định', 'luật', 'biện pháp'
     ];
     const lowerQuery = query.toLowerCase();
-    return searchKeywords.some(keyword => lowerQuery.includes(keyword));
+    const needsSearch = searchKeywords.some(keyword => lowerQuery.includes(keyword));
+    console.log("🔍 [NeedsWebSearch] Query:", query, "Result:", needsSearch);
+    return needsSearch;
 };
 
 export const generateAIResponse = async (
@@ -170,12 +172,13 @@ export const generateAIResponse = async (
     if (needsWebSearch(question)) {
         console.log("🔍 Performing web search for:", question);
         webResults = await searchWeb(question, 'news');
+        console.log("🔍 Web search returned:", webResults.length, "results");
 
         if (webResults.length > 0) {
             webSearchContext = `
 🌐 THÔNG TIN TỪ INTERNET (Nguồn tin mới nhất):
 ${webResults.map((r, i) => `${i + 1}. [${r.title}]
-   📝 ${r.snippet.substring(0, 200)}...
+   📝 ${r.snippet ? r.snippet.substring(0, 200) : 'No snippet'}...
    🔗 ${r.url}`).join('\n\n')}
 
 ⚠️ LƯU Ý: Khi sử dụng thông tin từ internet, hãy trích dẫn nguồn bằng cách ghi [Nguồn: tên bài viết].
@@ -226,6 +229,8 @@ ${dataSummary}`;
             title: r.title,
             url: r.url
         }));
+
+        console.log("✅ [generateAIResponse] Returning with", sources.length, "sources:", sources);
 
         return { text, sources };
     } catch (error: any) {
