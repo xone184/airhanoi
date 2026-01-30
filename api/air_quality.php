@@ -19,9 +19,10 @@ if ($action === 'upload_realtime' || $action === 'upload_forecast') {
     handleGetData($type);
 }
 
-function handleGetData($type) {
+function handleGetData($type)
+{
     global $db;
-    
+
     try {
         if ($type === 'realtime') {
             // Get latest air quality data for all districts
@@ -53,23 +54,23 @@ function handleGetData($type) {
                 LEFT JOIN dim_aqi_scale aqs ON aq.aqi_level_id = aqs.aqi_level_id
                 ORDER BY d.name
             ");
-            
+
             $data = $stmt->fetchAll();
-            
+
             // Format datetime as ISO string
             foreach ($data as &$row) {
                 if ($row['datetime']) {
                     $row['datetime'] = date('c', strtotime($row['datetime']));
                 }
             }
-            
+
             sendSuccess($data);
-            
+
         } elseif ($type === 'forecast') {
             // Get forecast data
             $districtId = $_GET['district_id'] ?? null;
             $limit = $_GET['limit'] ?? 7; // Default 7 days
-            
+
             $query = "
                 SELECT 
                     f.forecast_id,
@@ -88,27 +89,27 @@ function handleGetData($type) {
                 FROM fact_forecast f
                 JOIN dim_districts d ON f.district_id = d.district_id
                 JOIN dim_aqi_scale aqs ON f.aqi_level_id = aqs.aqi_level_id
-                WHERE f.forecast_datetime >= NOW()
+                WHERE f.forecast_datetime >= DATE_SUB(NOW(), INTERVAL 7 DAY)
             ";
-            
+
             $params = [];
             if ($districtId) {
                 $query .= " AND f.district_id = ?";
                 $params[] = $districtId;
             }
-            
+
             $query .= " ORDER BY f.forecast_datetime ASC LIMIT ?";
-            $params[] = (int)$limit * 30; // 30 districts * limit days
-            
+            $params[] = (int) $limit * 30; // 30 districts * limit days
+
             $stmt = $db->prepare($query);
             $stmt->execute($params);
             $data = $stmt->fetchAll();
-            
+
             // Format datetime
             foreach ($data as &$row) {
                 $row['datetime'] = date('c', strtotime($row['datetime']));
             }
-            
+
             sendSuccess($data);
         } else {
             sendError('Invalid type. Use: realtime or forecast', 400);
@@ -119,49 +120,50 @@ function handleGetData($type) {
     }
 }
 
-function handleUpload($action) {
+function handleUpload($action)
+{
     global $db;
-    
+
     if ($action === 'upload_realtime') {
         $input = getJsonInput();
         $data = $input['data'] ?? [];
-        
+
         if (empty($data)) {
             sendError('No data provided', 400);
         }
-        
+
         $inserted = 0;
         $errors = [];
-        
+
         // Start transaction
         $db->beginTransaction();
-        
+
         try {
             foreach ($data as $row) {
                 // Find district
                 $districtStmt = $db->prepare("SELECT district_id FROM dim_districts WHERE name = ?");
                 $districtStmt->execute([$row['district']]);
                 $district = $districtStmt->fetch();
-                
+
                 if (!$district) {
                     $errors[] = "District not found: " . $row['district'];
                     continue;
                 }
-                
+
                 // Find AQI level
-                $aqi = (int)$row['aqi'];
+                $aqi = (int) $row['aqi'];
                 $aqiLevelStmt = $db->prepare("
                     SELECT aqi_level_id FROM dim_aqi_scale 
                     WHERE ? BETWEEN min_aqi AND max_aqi
                 ");
                 $aqiLevelStmt->execute([$aqi]);
                 $aqiLevel = $aqiLevelStmt->fetch();
-                
+
                 if (!$aqiLevel) {
                     $errors[] = "Invalid AQI level: " . $aqi;
                     continue;
                 }
-                
+
                 // Insert or update
                 $stmt = $db->prepare("
                     INSERT INTO fact_air_quality 
@@ -175,7 +177,7 @@ function handleUpload($action) {
                         aqi = VALUES(aqi),
                         aqi_level_id = VALUES(aqi_level_id)
                 ");
-                
+
                 $datetime = date('Y-m-d H:i:s', strtotime($row['datetime']));
                 $stmt->execute([
                     $district['district_id'],
@@ -187,60 +189,60 @@ function handleUpload($action) {
                     $aqi,
                     $aqiLevel['aqi_level_id']
                 ]);
-                
+
                 $inserted++;
             }
-            
+
             $db->commit();
             sendSuccess([
                 'inserted' => $inserted,
                 'errors' => $errors
             ]);
-            
+
         } catch (Exception $e) {
             $db->rollBack();
             sendError('Upload failed: ' . $e->getMessage(), 500);
         }
-        
+
     } elseif ($action === 'upload_forecast') {
         $input = getJsonInput();
         $data = $input['data'] ?? [];
-        
+
         if (empty($data)) {
             sendError('No data provided', 400);
         }
-        
+
         $inserted = 0;
         $errors = [];
-        
+
         $db->beginTransaction();
-        
+
         try {
             foreach ($data as $row) {
                 // Find district
                 $districtStmt = $db->prepare("SELECT district_id FROM dim_districts WHERE name = ?");
                 $districtStmt->execute([$row['district']]);
                 $district = $districtStmt->fetch();
-                
+
                 if (!$district) {
                     $errors[] = "District not found: " . $row['district'];
                     continue;
                 }
-                
+
                 // Find AQI level
-                $aqi = (int)$row['aqi_forecast'];
+                $aqi = (int) $row['aqi_forecast'];
                 $aqiLevelStmt = $db->prepare("
                     SELECT aqi_level_id FROM dim_aqi_scale 
                     WHERE ? BETWEEN min_aqi AND max_aqi
                 ");
                 $aqiLevelStmt->execute([$aqi]);
                 $aqiLevel = $aqiLevelStmt->fetch();
-                
+
                 if (!$aqiLevel) {
                     $errors[] = "Invalid AQI level: " . $aqi;
                     continue;
                 }
-                
+
                 // Insert forecast
                 $stmt = $db->prepare("
                     INSERT INTO fact_forecast 
@@ -248,7 +250,7 @@ function handleUpload($action) {
                      aqi_level_id, temperature_forecast, humidity_forecast, source)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'manual')
                 ");
-                
+
                 $datetime = date('Y-m-d H:i:s', strtotime($row['datetime']));
                 $stmt->execute([
                     $district['district_id'],
@@ -260,16 +262,16 @@ function handleUpload($action) {
                     $row['temperature_forecast'] ?? null,
                     $row['humidity_forecast'] ?? null
                 ]);
-                
+
                 $inserted++;
             }
-            
+
             $db->commit();
             sendSuccess([
                 'inserted' => $inserted,
                 'errors' => $errors
             ]);
-            
+
         } catch (Exception $e) {
             $db->rollBack();
             sendError('Upload failed: ' . $e->getMessage(), 500);
