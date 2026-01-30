@@ -3,7 +3,7 @@ import { Wind, Droplets, Thermometer, Activity, MapPin, TrendingUp, ShieldCheck,
 import { DistrictData, ForecastData } from '../types';
 import {
     BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
-    PieChart, Pie, AreaChart, Area, CartesianGrid
+    PieChart, Pie, AreaChart, Area, CartesianGrid, LabelList
 } from 'recharts';
 import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType } from 'docx';
 import { saveAs } from 'file-saver';
@@ -510,14 +510,14 @@ const Dashboard: React.FC<DashboardProps> = ({ data, forecastData, temperatureUn
                         <div className="flex justify-between items-center mb-2">
                             <h3 className="text-white font-bold flex items-center gap-2 text-sm">
                                 <TrendingUp size={16} className="text-emerald-400" />
-                                Dự Báo Xu Hướng (7 Ngày)
+                                Dự Báo Xu Hướng (5 Ngày)
                             </h3>
                             {forecastSummary.length === 0 && <span className="text-xs text-orange-400 flex items-center gap-1"><AlertTriangle size={12} /> Chưa có dữ liệu</span>}
                         </div>
                         <div className="h-48 w-full">
                             {forecastSummary.length > 0 ? (
                                 <ResponsiveContainer width="100%" height="100%">
-                                    <AreaChart data={forecastSummary} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                    <AreaChart data={forecastSummary.slice(0, 5)} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
                                         <defs>
                                             <linearGradient id="colorAqiMini" x1="0" y1="0" x2="0" y2="1">
                                                 <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
@@ -551,7 +551,16 @@ const Dashboard: React.FC<DashboardProps> = ({ data, forecastData, temperatureUn
                                             fillOpacity={1}
                                             fill="url(#colorAqiMini)"
                                             activeDot={{ r: 6, strokeWidth: 0 }}
-                                        />
+                                        >
+                                            <LabelList
+                                                dataKey="aqi"
+                                                position="top"
+                                                fill="#fff"
+                                                fontSize={11}
+                                                fontWeight="bold"
+                                                offset={8}
+                                            />
+                                        </Area>
                                     </AreaChart>
                                 </ResponsiveContainer>
                             ) : (
