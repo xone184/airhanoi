@@ -71,20 +71,22 @@ const Dashboard: React.FC<DashboardProps> = ({ data, forecastData, temperatureUn
 
     const forecastSummary = useMemo(() => {
         if (!forecastData || forecastData.length === 0) return [];
-        const groups: Record<string, { total: number, count: number }> = {};
+        const groups: Record<string, { total: number, count: number, rawDate: string }> = {};
         forecastData.forEach(f => {
-            const date = f.datetime.split(' ')[0];
-            if (!groups[date]) groups[date] = { total: 0, count: 0 };
-            groups[date].total += f.aqi_forecast;
-            groups[date].count++;
+            // Handle both ISO format and space-separated format
+            const dateStr = f.datetime.includes('T') ? f.datetime.split('T')[0] : f.datetime.split(' ')[0];
+            if (!groups[dateStr]) groups[dateStr] = { total: 0, count: 0, rawDate: dateStr };
+            groups[dateStr].total += f.aqi_forecast;
+            groups[dateStr].count++;
         });
         return Object.entries(groups)
-            .map(([date, val]) => ({
-                date: new Date(date).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }),
+            .map(([dateKey, val]) => ({
+                rawDate: val.rawDate, // Keep for sorting
+                date: new Date(val.rawDate).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }),
                 aqi: Math.round(val.total / val.count)
             }))
-            .sort((a, b) => a.date.localeCompare(b.date))
-            .slice(0, 7);
+            .sort((a, b) => new Date(a.rawDate).getTime() - new Date(b.rawDate).getTime())
+            .slice(0, 5);
     }, [forecastData]);
 
     // --- 3. Search Logic ---
