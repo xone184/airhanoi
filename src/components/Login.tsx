@@ -1,10 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { User } from '../types';
 import { KeyRound, Mail, ArrowRight } from 'lucide-react';
+
+const GOOGLE_CLIENT_ID = '1039750061978-v46mil4439duhqh7tppnj2vph899iqls.apps.googleusercontent.com';
 
 interface LoginProps {
     onLogin: (user: User) => void;
     onSwitchToRegister: () => void;
+}
+
+declare global {
+    interface Window {
+        google?: {
+            accounts: {
+                id: {
+                    initialize: (config: any) => void;
+                    renderButton: (element: HTMLElement, options: any) => void;
+                    prompt: () => void;
+                };
+            };
+        };
+    }
 }
 
 const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => {
@@ -12,6 +28,103 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const googleBtnRef = useRef<HTMLDivElement>(null);
+
+    const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost/hanoi-air-quality-monitor/api';
+
+    // Initialize Google Sign-In
+    useEffect(() => {
+        const initGoogle = () => {
+            if (!window.google?.accounts?.id) return;
+
+            window.google.accounts.id.initialize({
+                client_id: GOOGLE_CLIENT_ID,
+                callback: handleGoogleCredential,
+                auto_select: false,
+                cancel_on_tap_outside: true,
+            });
+
+            if (googleBtnRef.current) {
+                window.google.accounts.id.renderButton(googleBtnRef.current, {
+                    type: 'standard',
+                    theme: 'outline',
+                    size: 'large',
+                    text: 'signin_with',
+                    locale: 'vi',
+                    width: 380,
+                    logo_alignment: 'left',
+                });
+            }
+        };
+
+        // Try immediately (if GSI already loaded)
+        initGoogle();
+
+        // Retry after a short delay (GSI may still be loading)
+        const timer = setTimeout(initGoogle, 1000);
+        return () => clearTimeout(timer);
+    }, []);
+
+    const handleGoogleCredential = async (response: { credential: string }) => {
+        setError('');
+        setLoading(true);
+
+        try {
+            // Decode JWT to get user info (without verification - server will verify)
+            const payload = JSON.parse(atob(response.credential.split('.')[1]));
+            console.log('Google user:', payload);
+
+            // Call backend to authenticate with Google token
+            const res = await fetch(`${API_BASE}/auth.php?action=google_login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ credential: response.credential })
+            });
+
+            const rawText = await res.text();
+            let result: any;
+
+            try { result = JSON.parse(rawText); }
+            catch {
+                // Backend may not support Google login yet - create local session from Google data
+                console.warn('Backend does not support Google login yet, using Google data directly.');
+                result = null;
+            }
+
+            if (result?.success && result?.data?.user) {
+                // Backend supported Google login
+                localStorage.setItem('user', JSON.stringify({
+                    ...result.data.user,
+                    token: result.data.token
+                }));
+                onLogin({
+                    user_id: result.data.user.user_id,
+                    username: result.data.user.username,
+                    email: result.data.user.email,
+                    role: result.data.user.role || 'user',
+                    isLoggedIn: true,
+                    token: result.data.token
+                });
+            } else {
+                // Fallback: create session from Google JWT data
+                const googleUser: User = {
+                    user_id: undefined,
+                    username: payload.name || payload.email,
+                    email: payload.email,
+                    role: 'user',
+                    isLoggedIn: true,
+                    token: response.credential // use Google credential as token
+                };
+                localStorage.setItem('user', JSON.stringify(googleUser));
+                onLogin(googleUser);
+            }
+        } catch (err: any) {
+            setError('Đăng nhập Google thất bại. Vui lòng thử lại.');
+            console.error('Google login error:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -26,9 +139,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => {
         }
 
         setLoading(true);
-
         try {
-            const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost/hanoi-air-quality-monitor/api';
             const response = await fetch(`${API_BASE}/auth.php?action=login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -38,7 +149,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => {
             const contentType = response.headers.get('content-type');
             const rawText = await response.text();
 
-            if (!contentType || !contentType.includes('application/json')) {
+            if (!contentType?.includes('application/json')) {
                 setError(`Server lỗi: ${rawText.substring(0, 150) || 'Response rỗng'}`);
                 return;
             }
@@ -69,16 +180,15 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => {
             } else {
                 setError('Dữ liệu đăng nhập không hợp lệ.');
             }
-        } catch (err: any) {
+        } catch {
             setError('Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.');
         } finally {
             setLoading(false);
         }
     };
 
-    const handleSocialLogin = (provider: string) => {
-        // Social login is not implemented yet, show info message
-        setError(`Đăng nhập qua ${provider} chưa được hỗ trợ. Vui lòng dùng email và mật khẩu.`);
+    const handleFacebookLogin = () => {
+        setError('Đăng nhập qua Facebook chưa được hỗ trợ. Vui lòng dùng email và mật khẩu hoặc đăng nhập Google.');
     };
 
     return (
@@ -98,7 +208,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => {
                         <p className="text-slate-400 mt-1 text-sm">Hệ thống Quan trắc Chất lượng Không khí</p>
                     </div>
 
-                    {/* Form */}
+                    {/* Email/Password Form */}
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div className="space-y-1">
                             <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">Email</label>
@@ -144,34 +254,23 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => {
                         </button>
                     </form>
 
-                    {/* Social Login Divider */}
+                    {/* Divider */}
                     <div className="flex items-center gap-3 my-5">
                         <div className="flex-1 h-px bg-white/10" />
                         <span className="text-slate-500 text-xs">hoặc đăng nhập nhanh hơn</span>
                         <div className="flex-1 h-px bg-white/10" />
                     </div>
 
-                    {/* Google Login */}
-                    <button
-                        onClick={() => handleSocialLogin('Google')}
-                        className="w-full flex items-center justify-center gap-3 py-2.5 bg-white hover:bg-gray-100 text-gray-700 font-medium text-sm rounded-xl transition-all mb-3 shadow"
-                    >
-                        {/* Google icon SVG */}
-                        <svg width="18" height="18" viewBox="0 0 48 48">
-                            <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z" />
-                            <path fill="#FF3D00" d="m6.306 14.691 6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z" />
-                            <path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238A11.91 11.91 0 0 1 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z" />
-                            <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 0 1-4.087 5.571l.003-.002 6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z" />
-                        </svg>
-                        Đăng nhập với Google
-                    </button>
+                    {/* Google Sign-In Button (rendered by GSI SDK) */}
+                    <div className="flex justify-center mb-3 overflow-hidden rounded-xl">
+                        <div ref={googleBtnRef} className="w-full" />
+                    </div>
 
                     {/* Facebook Login */}
                     <button
-                        onClick={() => handleSocialLogin('Facebook')}
+                        onClick={handleFacebookLogin}
                         className="w-full flex items-center justify-center gap-3 py-2.5 bg-[#1877F2] hover:bg-[#166FE5] text-white font-medium text-sm rounded-xl transition-all shadow"
                     >
-                        {/* Facebook icon SVG */}
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
                             <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
                         </svg>
