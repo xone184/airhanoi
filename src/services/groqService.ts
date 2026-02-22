@@ -153,7 +153,8 @@ const needsWebSearch = (query: string): boolean => {
 export const generateAIResponse = async (
     question: string,
     contextData: DistrictData[],
-    onChunk?: (text: string) => void
+    onChunk?: (text: string) => void,
+    webSearchEnabled: boolean = true
 ): Promise<AIResponse> => {
     console.log("🚀 generateAIResponse (Groq) called with question:", question);
 
@@ -165,11 +166,11 @@ export const generateAIResponse = async (
     const topPolluted = [...contextData].sort((a, b) => b.aqi - a.aqi).slice(0, 5);
     const topClean = [...contextData].sort((a, b) => a.aqi - b.aqi).slice(0, 5);
 
-    // Web search if needed
+    // Web search if needed AND enabled
     let webResults: SearchResult[] = [];
     let webSearchContext = '';
 
-    if (needsWebSearch(question)) {
+    if (webSearchEnabled && needsWebSearch(question)) {
         console.log("🔍 Performing web search for:", question);
         webResults = await searchWeb(question, 'news');
         console.log("🔍 Web search returned:", webResults.length, "results");
