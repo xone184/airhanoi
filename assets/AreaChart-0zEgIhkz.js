@@ -1,1 +1,0 @@
-import{E as a,X as r,Y as s,H as i}from"./generateCategoricalChart-GvWEAC_v.js";import{A as x}from"./Area-X-AkmH9C.js";var o=a({chartName:"AreaChart",GraphicalChild:x,axisComponents:[{axisType:"xAxis",AxisComp:r},{axisType:"yAxis",AxisComp:s}],formatAxisMap:i});export{o as A};
