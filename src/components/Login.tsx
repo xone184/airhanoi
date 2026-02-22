@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { User } from '../types';
 import { KeyRound, Mail, ArrowRight } from 'lucide-react';
 
-const GOOGLE_CLIENT_ID = '1039750061978-v46mil4439duhqh7tppnj2vph899iqls.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID = '1039750061978-u2agbau434s7l9bu91u0hu7vboun9kgn.apps.googleusercontent.com';
 
 interface LoginProps {
     onLogin: (user: User) => void;
