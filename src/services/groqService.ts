@@ -138,11 +138,21 @@ const searchWeb = async (query: string, type: 'general' | 'news' = 'news'): Prom
 // Detect if query needs web search
 const needsWebSearch = (query: string): boolean => {
     const searchKeywords = [
-        'tin tức', 'news', 'mới nhất', 'hôm nay', 'gần đây',
-        'theo báo', 'thông tin', 'cập nhật', 'sự kiện',
-        'reddit', 'google', 'internet', 'trực tuyến',
-        'nghiên cứu', 'báo cáo', 'dự báo thời tiết',
-        'chính sách', 'quy định', 'luật', 'biện pháp'
+        // Tin tức / news
+        'tin tức', 'news', 'mới nhất', 'hôm nay', 'gần đây', 'gần nhất',
+        'theo báo', 'cập nhật', 'sự kiện', 'reddit', 'internet',
+        // Thời tiết
+        'thời tiết', 'dự báo thời tiết', 'mưa', 'nắng', 'nhiệt độ', 'bão',
+        'gió', 'độ ẩm', 'khí hậu',
+        // Sức khỏe / y tế
+        'bệnh', 'sức khỏe', 'bệnh viện', 'thuốc', 'điều trị', 'y tế',
+        'phòng ngừa', 'triệu chứng',
+        // Thông tin/nghiên cứu
+        'thông tin', 'nghiên cứu', 'báo cáo', 'dữ liệu', 'theo nghiên cứu',
+        // Chính sách/quy định
+        'chính sách', 'quy định', 'luật', 'biện pháp', 'giải pháp',
+        // So sánh / quốc tế
+        'so sánh', 'tokyo', 'beijing', 'bangkok', 'thế giới', 'quốc tế',
     ];
     const lowerQuery = query.toLowerCase();
     const needsSearch = searchKeywords.some(keyword => lowerQuery.includes(keyword));
