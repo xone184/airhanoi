@@ -15,8 +15,10 @@ declare global {
             accounts: {
                 id: {
                     initialize: (config: any) => void;
-                    renderButton: (element: HTMLElement, options: any) => void;
                     prompt: () => void;
+                };
+                oauth2: {
+                    initTokenClient: (config: any) => { requestAccessToken: () => void };
                 };
             };
         };
@@ -28,84 +30,97 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [googleLoading, setGoogleLoading] = useState(false);
 
     const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost/hanoi-air-quality-monitor/api';
 
-    // Initialize Google Sign-In
+    // Wait for Google SDK to load
     useEffect(() => {
-        const initGoogle = () => {
-            if (!window.google?.accounts?.id) return;
-            window.google.accounts.id.initialize({
-                client_id: GOOGLE_CLIENT_ID,
-                callback: handleGoogleCredential,
-                auto_select: false,
-                cancel_on_tap_outside: true,
-            });
-        };
-        initGoogle();
-        const timer = setTimeout(initGoogle, 1000);
-        return () => clearTimeout(timer);
+        // Nothing to initialize – we use oauth2.initTokenClient on click
     }, []);
 
-    const handleGoogleCredential = async (response: { credential: string }) => {
-        setError('');
-        setLoading(true);
-
-        try {
-            // Decode JWT to get user info (without verification - server will verify)
-            const payload = JSON.parse(atob(response.credential.split('.')[1]));
-            console.log('Google user:', payload);
-
-            // Call backend to authenticate with Google token
-            const res = await fetch(`${API_BASE}/auth.php?action=google_login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ credential: response.credential })
-            });
-
-            const rawText = await res.text();
-            let result: any;
-
-            try { result = JSON.parse(rawText); }
-            catch {
-                // Backend may not support Google login yet - create local session from Google data
-                console.warn('Backend does not support Google login yet, using Google data directly.');
-                result = null;
-            }
-
-            if (result?.success && result?.data?.user) {
-                // Backend supported Google login
-                localStorage.setItem('user', JSON.stringify({
-                    ...result.data.user,
-                    token: result.data.token
-                }));
-                onLogin({
-                    user_id: result.data.user.user_id,
-                    username: result.data.user.username,
-                    email: result.data.user.email,
-                    role: result.data.user.role || 'user',
-                    isLoggedIn: true,
-                    token: result.data.token
-                });
-            } else {
-                // Fallback: create session from Google JWT data
-                const googleUser: User = {
-                    user_id: undefined,
-                    username: payload.name || payload.email,
-                    email: payload.email,
-                    role: 'user',
-                    isLoggedIn: true,
-                    token: response.credential // use Google credential as token
-                };
-                localStorage.setItem('user', JSON.stringify(googleUser));
-                onLogin(googleUser);
-            }
-        } catch (err: any) {
-            setError('Đăng nhập Google thất bại. Vui lòng thử lại.');
-            console.error('Google login error:', err);
-        } finally {
-            setLoading(false);
+    const handleGoogleLogin = async () => {
+        if (!window.google?.accounts?.oauth2) {
+            setError('Google SDK chưa tải xong, vui lòng thử lại sau.');
+            return;
         }
+        setError('');
+        setGoogleLoading(true);
+
+        const tokenClient = window.google.accounts.oauth2.initTokenClient({
+            client_id: GOOGLE_CLIENT_ID,
+            scope: 'email profile openid',
+            callback: async (tokenResponse: any) => {
+                if (tokenResponse.error) {
+                    setError('Đăng nhập Google thất bại: ' + (tokenResponse.error_description || tokenResponse.error));
+                    setGoogleLoading(false);
+                    return;
+                }
+
+                try {
+                    // Fetch user info from Google API using access token
+                    const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                        headers: { Authorization: `Bearer ${tokenResponse.access_token}` }
+                    });
+                    const userInfo = await res.json();
+
+                    if (!userInfo.email) {
+                        setError('Không thể lấy thông tin tài khoản Google.');
+                        setGoogleLoading(false);
+                        return;
+                    }
+
+                    // Try backend first
+                    try {
+                        const backendRes = await fetch(`${API_BASE}/auth.php?action=google_login`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                email: userInfo.email,
+                                name: userInfo.name,
+                                google_id: userInfo.sub,
+                                access_token: tokenResponse.access_token
+                            })
+                        });
+                        const rawText = await backendRes.text();
+                        const result = rawText ? JSON.parse(rawText) : null;
+
+                        if (result?.success && result?.data?.user) {
+                            localStorage.setItem('user', JSON.stringify(result.data.user));
+                            onLogin({
+                                user_id: result.data.user.user_id,
+                                username: result.data.user.username,
+                                email: result.data.user.email,
+                                role: result.data.user.role || 'user',
+                                isLoggedIn: true,
+                                token: result.data.token
+                            });
+                            return;
+                        }
+                    } catch {
+                        // Backend doesn't support Google login yet, use client data
+                    }
+
+                    // Fallback: create local session from Google user info
+                    const googleUser: User = {
+                        user_id: undefined,
+                        username: userInfo.name || userInfo.email,
+                        email: userInfo.email,
+                        role: 'user',
+                        isLoggedIn: true,
+                        token: tokenResponse.access_token
+                    };
+                    localStorage.setItem('user', JSON.stringify(googleUser));
+                    onLogin(googleUser);
+                } catch (err: any) {
+                    setError('Lỗi khi xử lý đăng nhập Google. Vui lòng thử lại.');
+                } finally {
+                    setGoogleLoading(false);
+                }
+            }
+        });
+
+        tokenClient.requestAccessToken();
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -243,24 +258,29 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => {
                         <div className="flex-1 h-px bg-white/10" />
                     </div>
 
-                    {/* Google Sign-In - Custom Button */}
+                    {/* Google Login - OAuth2 Popup (no FedCM) */}
                     <button
                         type="button"
-                        onClick={() => window.google?.accounts?.id?.prompt()}
-                        disabled={loading}
+                        onClick={handleGoogleLogin}
+                        disabled={googleLoading || loading}
                         className="w-full flex items-center justify-center gap-3 py-2.5 bg-white hover:bg-gray-50 text-gray-700 font-medium text-sm rounded-xl transition-all mb-2 shadow border border-gray-200 disabled:opacity-60"
                     >
-                        {/* Google multicolor icon */}
-                        <svg width="18" height="18" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-                            <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z" />
-                            <path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z" />
-                            <path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238A11.91 11.91 0 0 1 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z" />
-                            <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 0 1-4.087 5.571l.003-.002 6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z" />
-                        </svg>
-                        Đăng nhập bằng Google
+                        {googleLoading ? (
+                            <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                            <svg width="18" height="18" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+                                <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z" />
+                                <path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z" />
+                                <path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238A11.91 11.91 0 0 1 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z" />
+                                <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 0 1-4.087 5.571l.003-.002 6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z" />
+                            </svg>
+                        )}
+                        {googleLoading ? 'Đang kết nối Google...' : 'Đăng nhập bằng Google'}
                     </button>
+
                     {/* Facebook Login */}
                     <button
+                        type="button"
                         onClick={handleFacebookLogin}
                         className="w-full flex items-center justify-center gap-3 py-2.5 bg-[#1877F2] hover:bg-[#166FE5] text-white font-medium text-sm rounded-xl transition-all shadow"
                     >
