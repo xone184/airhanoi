@@ -15,8 +15,21 @@
   <!-- Google Identity Services -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 
-  <script type="module" crossorigin src="./assets/index-peRU1YZp.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-CknXysdS.css">
+  <!-- Facebook SDK -->
+  <script>
+    window.fbAsyncInit = function () {
+      FB.init({
+        appId: '1328058925800029',
+        cookie: true,
+        xfbml: false,
+        version: 'v22.0'
+      });
+    };
+  </script>
+  <script async defer crossorigin="anonymous" src="https://connect.facebook.net/vi_VN/sdk.js"></script>
+
+  <script type="module" crossorigin src="./assets/index-BOmWGH5v.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-vxXPzob8.css">
 </head>
 
 <body>
