@@ -138,8 +138,8 @@ class DatabaseService {
     }
 
     // --- USERS (Admin) ---
-    async getUsers(): Promise<AdminUserRow[]> {
-        const result = await api.getUsers();
+    async getUsers(filters?: { auth_provider?: string; date_from?: string; date_to?: string }): Promise<AdminUserRow[]> {
+        const result = await api.getUsers(filters);
         if (result.success && result.data) {
             return (result.data as any[]).map(u => ({
                 id: Number(u.user_id),
@@ -147,7 +147,8 @@ class DatabaseService {
                 email: u.email,
                 role: u.role,
                 status: Number(u.is_active) === 1 ? 'active' : 'banned',
-                joined: u.created_at
+                joined: u.created_at,
+                auth_provider: u.auth_provider || 'system'
             }));
         }
         throw new Error(result.error || 'Failed to load users');

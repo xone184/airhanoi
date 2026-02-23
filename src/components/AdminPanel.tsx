@@ -35,6 +35,7 @@ type AdminUserRow = {
     role: string;
     status: 'active' | 'banned';
     joined: string;
+    auth_provider?: string; // 'system' | 'google' | 'facebook'
 };
 
 const AdminPanel: React.FC<AdminPanelProps> = ({
@@ -73,6 +74,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
     const [userLoadError, setUserLoadError] = useState<string | null>(null);
     const [userSearch, setUserSearch] = useState('');
     const [userFilterStatus, setUserFilterStatus] = useState<'all' | 'active' | 'banned'>('all');
+    const [userFilterProvider, setUserFilterProvider] = useState<string>('all');
+    const [userDateFrom, setUserDateFrom] = useState<string>('');
+    const [userDateTo, setUserDateTo] = useState<string>('');
     const [isUserModalOpen, setIsUserModalOpen] = useState(false);
     const [isEditUserModalOpen, setIsEditUserModalOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<AdminUserRow | null>(null);
@@ -96,22 +100,21 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
         type: 'info'
     });
 
-    // Fetch users from backend to reflect real database
-    React.useEffect(() => {
-        const loadUsers = async () => {
-            try {
-                const mapped = await db.getUsers();
-                setUsers(mapped);
-                setUserLoadError(null);
-                addLog('success', `Đã tải ${mapped.length} người dùng từ CSDL`);
-            } catch (error: any) {
-                console.error('Load users error:', error);
-                setUserLoadError('Không thể tải danh sách người dùng từ CSDL');
-                addLog('error', 'Không thể tải danh sách người dùng từ CSDL');
-            }
-        };
-        loadUsers();
+    // Fetch users from backend (with filters)
+    const loadUsers = React.useCallback(async (filters?: { auth_provider?: string; date_from?: string; date_to?: string }) => {
+        try {
+            const mapped = await db.getUsers(filters);
+            setUsers(mapped);
+            setUserLoadError(null);
+        } catch (error: any) {
+            console.error('Load users error:', error);
+            setUserLoadError('Không thể tải danh sách người dùng từ CSDL');
+        }
     }, []);
+
+    React.useEffect(() => {
+        loadUsers();
+    }, [loadUsers]);
 
     // --- HANDLERS: FILES ---
     const addLog = (type: 'info' | 'success' | 'warning' | 'error', msg: string) => {
@@ -585,19 +588,19 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                 {/* 2. USER MANAGEMENT VIEW */}
                 {activeSection === 'users' && (
                     <div className="space-y-4">
-                        <div className="flex justify-between items-center">
+                        <div className="flex flex-wrap justify-between items-start gap-3">
                             <div>
                                 <h2 className="text-2xl font-bold text-white">Quản Lý Người Dùng</h2>
                                 <p className="text-slate-400 text-sm mt-1">
                                     {userLoadError ? userLoadError : `Đang hiển thị ${users.length} người dùng từ CSDL`}
                                 </p>
                             </div>
-                            <div className="flex items-center gap-3">
-                                {/* Filter Dropdown */}
+                            <div className="flex flex-wrap items-center gap-2">
+                                {/* Filter: Status */}
                                 <div className="relative">
-                                    <Filter className="absolute left-3 top-2.5 text-slate-500" size={16} />
+                                    <Filter className="absolute left-3 top-2.5 text-slate-500" size={14} />
                                     <select
-                                        className="bg-slate-900 border border-slate-700 rounded-lg py-2 pl-10 pr-8 text-white text-sm focus:border-blue-500 outline-none appearance-none cursor-pointer hover:bg-slate-800 transition-colors"
+                                        className="bg-slate-900 border border-slate-700 rounded-lg py-2 pl-9 pr-7 text-white text-sm focus:border-blue-500 outline-none appearance-none cursor-pointer hover:bg-slate-800 transition-colors"
                                         value={userFilterStatus}
                                         onChange={(e) => setUserFilterStatus(e.target.value as any)}
                                     >
@@ -607,16 +610,66 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                                     </select>
                                 </div>
 
+                                {/* Filter: Login Type */}
                                 <div className="relative">
-                                    <Search className="absolute left-3 top-2.5 text-slate-500" size={16} />
+                                    <Users className="absolute left-3 top-2.5 text-slate-500" size={14} />
+                                    <select
+                                        className="bg-slate-900 border border-slate-700 rounded-lg py-2 pl-9 pr-7 text-white text-sm focus:border-blue-500 outline-none appearance-none cursor-pointer hover:bg-slate-800 transition-colors"
+                                        value={userFilterProvider}
+                                        onChange={(e) => {
+                                            setUserFilterProvider(e.target.value);
+                                            loadUsers({
+                                                auth_provider: e.target.value,
+                                                date_from: userDateFrom,
+                                                date_to: userDateTo
+                                            });
+                                        }}
+                                    >
+                                        <option value="all">Tất cả loại TK</option>
+                                        <option value="system">🏠 Tài khoản hệ thống</option>
+                                        <option value="google">🔵 Tài khoản Google</option>
+                                        <option value="facebook">📘 Tài khoản Facebook</option>
+                                    </select>
+                                </div>
+
+                                {/* Filter: Date From */}
+                                <div className="flex items-center gap-1">
+                                    <span className="text-slate-500 text-xs">Từ:</span>
+                                    <input
+                                        type="date"
+                                        className="bg-slate-900 border border-slate-700 rounded-lg py-1.5 px-3 text-white text-sm focus:border-blue-500 outline-none cursor-pointer hover:bg-slate-800 transition-colors"
+                                        value={userDateFrom}
+                                        onChange={(e) => {
+                                            setUserDateFrom(e.target.value);
+                                            loadUsers({ auth_provider: userFilterProvider, date_from: e.target.value, date_to: userDateTo });
+                                        }}
+                                    />
+                                </div>
+                                <div className="flex items-center gap-1">
+                                    <span className="text-slate-500 text-xs">Đến:</span>
+                                    <input
+                                        type="date"
+                                        className="bg-slate-900 border border-slate-700 rounded-lg py-1.5 px-3 text-white text-sm focus:border-blue-500 outline-none cursor-pointer hover:bg-slate-800 transition-colors"
+                                        value={userDateTo}
+                                        onChange={(e) => {
+                                            setUserDateTo(e.target.value);
+                                            loadUsers({ auth_provider: userFilterProvider, date_from: userDateFrom, date_to: e.target.value });
+                                        }}
+                                    />
+                                </div>
+
+                                {/* Search */}
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-2.5 text-slate-500" size={14} />
                                     <input
                                         type="text"
-                                        className="bg-slate-900 border border-slate-700 rounded-lg py-2 pl-10 pr-4 text-white text-sm focus:border-blue-500 outline-none w-64 focus:w-72 transition-all"
+                                        className="bg-slate-900 border border-slate-700 rounded-lg py-2 pl-9 pr-4 text-white text-sm focus:border-blue-500 outline-none w-52 transition-all"
                                         placeholder="Tìm theo tên hoặc email..."
                                         value={userSearch}
                                         onChange={(e) => setUserSearch(e.target.value)}
                                     />
                                 </div>
+
                                 <button
                                     onClick={() => setIsUserModalOpen(true)}
                                     className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-invariant-white rounded-lg text-sm font-semibold flex items-center gap-2 shadow-lg shadow-blue-900/20 active:scale-95 transition-all"
@@ -631,6 +684,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                                 <thead className="bg-slate-950 text-slate-400 text-xs font-bold uppercase tracking-wider">
                                     <tr>
                                         <th className="p-4">User Info</th>
+                                        <th className="p-4">Loại đăng nhập</th>
                                         <th className="p-4">Role</th>
                                         <th className="p-4">Status</th>
                                         <th className="p-4">Joined Date</th>
@@ -640,7 +694,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                                 <tbody className="divide-y divide-slate-800">
                                     {users
                                         .filter(u => {
-                                            const matchSearch = u.name.toLowerCase().includes(userSearch.toLowerCase()) || u.email.includes(userSearch);
+                                            const matchSearch = u.name.toLowerCase().includes(userSearch.toLowerCase()) || u.email.toLowerCase().includes(userSearch.toLowerCase());
                                             const matchStatus = userFilterStatus === 'all' || u.status === userFilterStatus;
                                             return matchSearch && matchStatus;
                                         })
@@ -648,12 +702,29 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                                             <tr key={user.id} className="hover:bg-slate-800/50 transition-colors">
                                                 <td className="p-4 flex items-center gap-3">
                                                     <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-slate-300 font-bold border border-slate-700">
-                                                        {user.name.charAt(0)}
+                                                        {user.name.charAt(0).toUpperCase()}
                                                     </div>
                                                     <div>
                                                         <p className="font-bold text-white text-sm">{user.name}</p>
                                                         <p className="text-xs text-slate-500">{user.email}</p>
                                                     </div>
+                                                </td>
+                                                <td className="p-4">
+                                                    {user.auth_provider === 'google' ? (
+                                                        <span className="flex items-center gap-1.5 px-2 py-1 rounded-full text-[11px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20 w-fit">
+                                                            <svg width="12" height="12" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20H24v8h11.3C33.6 32.7 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.8 1.1 8 3l5.7-5.7C34 6 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.7-.4-4z" /><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 15.1 18.9 12 24 12c3 0 5.8 1.1 8 3l5.7-5.7C34 6 29.3 4 24 4 16.3 4 9.6 8.3 6.3 14.7z" /><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2A12 12 0 0 1 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z" /><path fill="#1976D2" d="M43.6 20H24v8h11.3c-.8 2.3-2.3 4.3-4.2 5.7l6.2 5.2C40.9 35.2 44 30 44 24c0-1.3-.1-2.7-.4-4z" /></svg>
+                                                            Google
+                                                        </span>
+                                                    ) : user.auth_provider === 'facebook' ? (
+                                                        <span className="flex items-center gap-1.5 px-2 py-1 rounded-full text-[11px] font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 w-fit">
+                                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" /></svg>
+                                                            Facebook
+                                                        </span>
+                                                    ) : (
+                                                        <span className="flex items-center gap-1.5 px-2 py-1 rounded-full text-[11px] font-semibold bg-slate-700 text-slate-400 border border-slate-600 w-fit">
+                                                            🏠 Hệ thống
+                                                        </span>
+                                                    )}
                                                 </td>
                                                 <td className="p-4">
                                                     <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${user.role === 'admin' ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'}`}>

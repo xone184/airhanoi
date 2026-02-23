@@ -36,7 +36,8 @@ switch ($method) {
         sendError('Method not allowed', 405);
 }
 
-function ensureAdmin() {
+function ensureAdmin()
+{
     $user = requireAuth();
     if ($user['role'] !== 'admin') {
         sendError('Forbidden', 403);
@@ -44,20 +45,59 @@ function ensureAdmin() {
     return $user;
 }
 
-function handleListUsers() {
+function handleListUsers()
+{
     ensureAdmin();
     $db = Database::getInstance()->getConnection();
-    $stmt = $db->query("SELECT user_id, username, email, role, is_active, created_at FROM users ORDER BY created_at DESC");
+
+    // Support filters: auth_provider, date_from, date_to
+    $authProvider = $_GET['auth_provider'] ?? 'all';
+    $dateFrom = $_GET['date_from'] ?? '';
+    $dateTo = $_GET['date_to'] ?? '';
+
+    $where = [];
+    $params = [];
+
+    // auth_provider filter: use COALESCE so NULL = 'system'
+    if ($authProvider !== 'all') {
+        if ($authProvider === 'system') {
+            $where[] = "(COALESCE(auth_provider, 'system') = 'system')";
+        } else {
+            $where[] = "auth_provider = ?";
+            $params[] = $authProvider;
+        }
+    }
+
+    if ($dateFrom) {
+        $where[] = "DATE(created_at) >= ?";
+        $params[] = $dateFrom;
+    }
+    if ($dateTo) {
+        $where[] = "DATE(created_at) <= ?";
+        $params[] = $dateTo;
+    }
+
+    $sql = "SELECT user_id, username, email, role, is_active, created_at,
+                   COALESCE(auth_provider, 'system') AS auth_provider
+            FROM users";
+    if ($where) {
+        $sql .= " WHERE " . implode(" AND ", $where);
+    }
+    $sql .= " ORDER BY created_at DESC";
+
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
     $users = $stmt->fetchAll();
     sendSuccess($users);
 }
 
-function handleUpdateUser() {
+function handleUpdateUser()
+{
     $admin = ensureAdmin();
     $db = Database::getInstance()->getConnection();
     $input = getJsonInput();
 
-    $userId = isset($input['user_id']) ? (int)$input['user_id'] : 0;
+    $userId = isset($input['user_id']) ? (int) $input['user_id'] : 0;
     $action = $input['action'] ?? '';
 
     if ($userId <= 0 || !in_array($action, ['ban', 'activate', 'promote', 'update_info'])) {
@@ -73,7 +113,7 @@ function handleUpdateUser() {
                 sendError('Cannot change your own role.', 400);
             }
         } else {
-             sendError('Cannot modify your own account with this action', 400);
+            sendError('Cannot modify your own account with this action', 400);
         }
     }
 
@@ -88,8 +128,8 @@ function handleUpdateUser() {
         $stmt->execute([$userId]);
     } elseif ($action === 'update_info') {
         $username = trim($input['username'] ?? '');
-        $email    = trim($input['email'] ?? '');
-        $role     = $input['role'] ?? 'user';
+        $email = trim($input['email'] ?? '');
+        $role = $input['role'] ?? 'user';
 
         if (empty($username) || empty($email) || !in_array($role, ['admin', 'user'])) {
             sendError('Username, email, and role are required for update.', 400);
@@ -117,15 +157,16 @@ function handleUpdateUser() {
     sendSuccess($user);
 }
 
-function handleCreateUser() {
+function handleCreateUser()
+{
     ensureAdmin();
     $db = Database::getInstance()->getConnection();
     $input = getJsonInput();
 
     $username = trim($input['username'] ?? '');
-    $email    = trim($input['email'] ?? '');
+    $email = trim($input['email'] ?? '');
     $password = $input['password'] ?? '';
-    $role     = $input['role'] ?? 'user';
+    $role = $input['role'] ?? 'user';
 
     if (empty($username) || empty($email) || empty($password)) {
         sendError('Thiếu thông tin bắt buộc (username, email, password)', 400);
@@ -155,7 +196,7 @@ function handleCreateUser() {
     ");
     $stmt->execute([$username, $email, $passwordHash, $role]);
 
-    $userId = (int)$db->lastInsertId();
+    $userId = (int) $db->lastInsertId();
     $getStmt = $db->prepare("SELECT user_id, username, email, role, is_active, created_at FROM users WHERE user_id = ?");
     $getStmt->execute([$userId]);
     $user = $getStmt->fetch();
@@ -163,12 +204,13 @@ function handleCreateUser() {
     sendSuccess($user, 201);
 }
 
-function handleDeleteUser() {
+function handleDeleteUser()
+{
     $admin = ensureAdmin();
     $db = Database::getInstance()->getConnection();
     $input = getJsonInput();
 
-    $userId = isset($input['user_id']) ? (int)$input['user_id'] : 0;
+    $userId = isset($input['user_id']) ? (int) $input['user_id'] : 0;
 
     if ($userId <= 0) {
         sendError('Invalid user_id', 400);

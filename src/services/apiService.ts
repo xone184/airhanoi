@@ -274,8 +274,13 @@ export const api = {
     },
 
     // Users (admin)
-    async getUsers() {
-        return apiRequest('users.php');
+    async getUsers(filters?: { auth_provider?: string; date_from?: string; date_to?: string }) {
+        const params = new URLSearchParams();
+        if (filters?.auth_provider && filters.auth_provider !== 'all') params.append('auth_provider', filters.auth_provider);
+        if (filters?.date_from) params.append('date_from', filters.date_from);
+        if (filters?.date_to) params.append('date_to', filters.date_to);
+        const qs = params.toString();
+        return apiRequest(`users.php${qs ? '?' + qs : ''}`);
     },
 
     async updateUser(userId: number, action: 'ban' | 'activate' | 'promote') {
