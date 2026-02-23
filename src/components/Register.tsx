@@ -71,7 +71,7 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onBackToLogin }) => {
                     ...result.data.user,
                     token: result.data.token
                 }));
-                
+
                 onRegister({
                     user_id: result.data.user.user_id,
                     username: result.data.user.username,
@@ -89,87 +89,93 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onBackToLogin }) => {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-slate-950 p-4">
-            <div className="bg-slate-800 p-8 rounded-2xl shadow-2xl w-full max-w-md border border-slate-700 relative">
-                <button 
-                    onClick={onBackToLogin}
-                    className="absolute top-8 left-8 text-slate-400 hover:text-white transition-colors"
-                >
-                    <ArrowLeft size={24} />
-                </button>
+        <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+            {/* Background - same as Login */}
+            <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1555921015-5532091f6026?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center z-0" />
+            <div className="absolute inset-0 bg-slate-900/75 backdrop-blur-sm z-0" />
 
-                <div className="text-center mb-8">
-                    <h2 className="text-2xl font-bold text-white">Đăng Ký</h2>
-                    <p className="text-slate-400 mt-2">Tạo tài khoản để nhận cảnh báo ô nhiễm</p>
-                </div>
-
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-1">Họ tên</label>
-                        <div className="relative">
-                            <UserIcon className="absolute left-3 top-3 text-slate-500 z-10" size={20} />
-                            <input
-                                type="text"
-                                className="w-full bg-slate-900 border border-slate-700 rounded-xl py-3 pl-10 pr-4 text-white focus:ring-2 focus:ring-blue-500 outline-none relative"
-                                placeholder="Nhập họ tên của bạn"
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                            />
-                        </div>
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-1">Email</label>
-                        <div className="relative">
-                            <Mail className="absolute left-3 top-3 text-slate-500 z-10" size={20} />
-                            <input
-                                type="email"
-                                className="w-full bg-slate-900 border border-slate-700 rounded-xl py-3 pl-10 pr-4 text-white focus:ring-2 focus:ring-blue-500 outline-none relative"
-                                placeholder="Nhập email của bạn"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                            />
-                        </div>
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-1">Mật khẩu</label>
-                        <div className="relative">
-                            <KeyRound className="absolute left-3 top-3 text-slate-500 z-10" size={20} />
-                            <input
-                                type="password"
-                                className="w-full bg-slate-900 border border-slate-700 rounded-xl py-3 pl-10 pr-4 text-white focus:ring-2 focus:ring-blue-500 outline-none relative"
-                                placeholder="••••••••"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                            />
-                        </div>
-                        <p className="text-xs text-slate-500 mt-1 ml-1">Tối thiểu 6 ký tự</p>
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-1">Nhập lại mật khẩu</label>
-                        <div className="relative">
-                            <KeyRound className="absolute left-3 top-3 text-slate-500 z-10" size={20} />
-                            <input
-                                type="password"
-                                className="w-full bg-slate-900 border border-slate-700 rounded-xl py-3 pl-10 pr-4 text-white focus:ring-2 focus:ring-blue-500 outline-none relative"
-                                placeholder="••••••••"
-                                value={confirmPassword}
-                                onChange={(e) => setConfirmPassword(e.target.value)}
-                            />
-                        </div>
-                    </div>
-
-                    {error && <p className="text-red-400 text-sm text-center bg-red-500/10 p-2 rounded-lg border border-red-500/20">{error}</p>}
-
+            <div className="relative z-10 w-full max-w-[420px]">
+                <div className="bg-slate-900/70 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl p-8">
                     <button
-                        type="submit"
-                        className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white text-invariant-white font-bold rounded-xl transition-all shadow-lg"
+                        onClick={onBackToLogin}
+                        className="absolute top-6 left-6 text-slate-400 hover:text-white transition-colors"
                     >
-                        Tạo Tài Khoản
+                        <ArrowLeft size={22} />
                     </button>
-                </form>
+
+                    <div className="text-center mb-8">
+                        <h2 className="text-2xl font-bold text-white">Đăng Ký</h2>
+                        <p className="text-slate-400 mt-2">Tạo tài khoản để nhận cảnh báo ô nhiễm</p>
+                    </div>
+
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium text-slate-300 mb-1">Họ tên</label>
+                            <div className="relative">
+                                <UserIcon className="absolute left-3 top-3 text-slate-500 z-10" size={20} />
+                                <input
+                                    type="text"
+                                    className="w-full bg-slate-900 border border-slate-700 rounded-xl py-3 pl-10 pr-4 text-white focus:ring-2 focus:ring-blue-500 outline-none relative"
+                                    placeholder="Nhập họ tên của bạn"
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-slate-300 mb-1">Email</label>
+                            <div className="relative">
+                                <Mail className="absolute left-3 top-3 text-slate-500 z-10" size={20} />
+                                <input
+                                    type="email"
+                                    className="w-full bg-slate-900 border border-slate-700 rounded-xl py-3 pl-10 pr-4 text-white focus:ring-2 focus:ring-blue-500 outline-none relative"
+                                    placeholder="Nhập email của bạn"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-slate-300 mb-1">Mật khẩu</label>
+                            <div className="relative">
+                                <KeyRound className="absolute left-3 top-3 text-slate-500 z-10" size={20} />
+                                <input
+                                    type="password"
+                                    className="w-full bg-slate-900 border border-slate-700 rounded-xl py-3 pl-10 pr-4 text-white focus:ring-2 focus:ring-blue-500 outline-none relative"
+                                    placeholder="••••••••"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                />
+                            </div>
+                            <p className="text-xs text-slate-500 mt-1 ml-1">Tối thiểu 6 ký tự</p>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-slate-300 mb-1">Nhập lại mật khẩu</label>
+                            <div className="relative">
+                                <KeyRound className="absolute left-3 top-3 text-slate-500 z-10" size={20} />
+                                <input
+                                    type="password"
+                                    className="w-full bg-slate-900 border border-slate-700 rounded-xl py-3 pl-10 pr-4 text-white focus:ring-2 focus:ring-blue-500 outline-none relative"
+                                    placeholder="••••••••"
+                                    value={confirmPassword}
+                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                />
+                            </div>
+                        </div>
+
+                        {error && <p className="text-red-400 text-sm text-center bg-red-500/10 p-2 rounded-lg border border-red-500/20">{error}</p>}
+
+                        <button
+                            type="submit"
+                            className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white text-invariant-white font-bold rounded-xl transition-all shadow-lg"
+                        >
+                            Tạo Tài Khoản
+                        </button>
+                    </form>
+                </div>
             </div>
         </div>
     );
