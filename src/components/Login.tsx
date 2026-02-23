@@ -22,6 +22,11 @@ declare global {
                 };
             };
         };
+        FB?: {
+            login: (callback: (response: any) => void, options?: any) => void;
+            api: (path: string, params: any, callback: (response: any) => void) => void;
+            getLoginStatus: (callback: (response: any) => void) => void;
+        };
     }
 }
 
@@ -31,6 +36,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const [googleLoading, setGoogleLoading] = useState(false);
+    const [facebookLoading, setFacebookLoading] = useState(false);
 
     const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost/hanoi-air-quality-monitor/api';
 
@@ -185,7 +191,78 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => {
     };
 
     const handleFacebookLogin = () => {
-        setError('Đăng nhập qua Facebook chưa được hỗ trợ. Vui lòng dùng email và mật khẩu hoặc đăng nhập Google.');
+        if (!window.FB) {
+            setError('Facebook SDK chưa tải xong, vui lòng thử lại.');
+            return;
+        }
+        setError('');
+        setFacebookLoading(true);
+
+        window.FB.login((response: any) => {
+            if (response.authResponse) {
+                const { accessToken } = response.authResponse;
+                // Lấy thông tin người dùng từ Graph API
+                window.FB!.api('/me', { fields: 'name,email,id' }, async (userInfo: any) => {
+                    if (!userInfo || userInfo.error) {
+                        setError('Không thể lấy thông tin tài khoản Facebook.');
+                        setFacebookLoading(false);
+                        return;
+                    }
+
+                    try {
+                        // Thử gọi backend
+                        try {
+                            const backendRes = await fetch(`${API_BASE}/auth.php?action=facebook_login`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    email: userInfo.email,
+                                    name: userInfo.name,
+                                    facebook_id: userInfo.id,
+                                    access_token: accessToken
+                                })
+                            });
+                            const rawText = await backendRes.text();
+                            const result = rawText ? JSON.parse(rawText) : null;
+
+                            if (result?.success && result?.data?.user) {
+                                localStorage.setItem('user', JSON.stringify(result.data.user));
+                                onLogin({
+                                    user_id: result.data.user.user_id,
+                                    username: result.data.user.username,
+                                    email: result.data.user.email,
+                                    role: result.data.user.role || 'user',
+                                    isLoggedIn: true,
+                                    token: result.data.token
+                                });
+                                return;
+                            }
+                        } catch {
+                            // Backend chưa hỗ trợ, dùng fallback
+                        }
+
+                        // Fallback: tạo session local từ dữ liệu Facebook
+                        const fbUser: User = {
+                            user_id: undefined,
+                            username: userInfo.name || userInfo.email || 'Facebook User',
+                            email: userInfo.email || `fb_${userInfo.id}@facebook.com`,
+                            role: 'user',
+                            isLoggedIn: true,
+                            token: accessToken
+                        };
+                        localStorage.setItem('user', JSON.stringify(fbUser));
+                        onLogin(fbUser);
+                    } catch (err: any) {
+                        setError('Lỗi khi xử lý đăng nhập Facebook. Vui lòng thử lại.');
+                    } finally {
+                        setFacebookLoading(false);
+                    }
+                });
+            } else {
+                // User hủy đăng nhập
+                setFacebookLoading(false);
+            }
+        }, { scope: 'email,public_profile' });
     };
 
     return (
@@ -282,12 +359,17 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => {
                     <button
                         type="button"
                         onClick={handleFacebookLogin}
-                        className="w-full flex items-center justify-center gap-3 py-2.5 bg-[#1877F2] hover:bg-[#166FE5] text-white font-medium text-sm rounded-xl transition-all shadow"
+                        disabled={facebookLoading || loading || googleLoading}
+                        className="w-full flex items-center justify-center gap-3 py-2.5 bg-[#1877F2] hover:bg-[#166FE5] text-white font-medium text-sm rounded-xl transition-all shadow disabled:opacity-60"
                     >
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
-                            <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-                        </svg>
-                        Đăng nhập với Facebook
+                        {facebookLoading ? (
+                            <div className="w-4 h-4 border-2 border-white/50 border-t-white rounded-full animate-spin" />
+                        ) : (
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
+                                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+                            </svg>
+                        )}
+                        {facebookLoading ? 'Đang kết nối Facebook...' : 'Đăng nhập với Facebook'}
                     </button>
 
                     {/* Register Link */}

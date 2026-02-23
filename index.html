@@ -15,6 +15,19 @@
   <!-- Google Identity Services -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 
+  <!-- Facebook SDK -->
+  <script>
+    window.fbAsyncInit = function () {
+      FB.init({
+        appId: '1328058925800029',
+        cookie: true,
+        xfbml: false,
+        version: 'v22.0'
+      });
+    };
+  </script>
+  <script async defer crossorigin="anonymous" src="https://connect.facebook.net/vi_VN/sdk.js"></script>
+
 </head>
 
 <body>
