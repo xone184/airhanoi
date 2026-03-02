@@ -118,8 +118,9 @@ function handleGetData($type)
             sendError('Invalid type. Use: realtime or forecast', 400);
         }
     } catch (PDOException $e) {
-        // Catch any database-related errors
         sendError('Database query failed: ' . $e->getMessage(), 500);
+    } catch (Exception $e) {
+        sendError('Server error: ' . $e->getMessage(), 500);
     }
 }
 
