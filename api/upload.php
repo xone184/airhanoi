@@ -47,6 +47,9 @@ try {
             }
         }
 
+        // Clear old CSV realtime data before re-importing to avoid duplicates
+        $db->exec("DELETE FROM fact_air_quality WHERE source = 'csv'");
+
         while (($row = fgetcsv($csvFile)) !== false) {
             if (count($row) < count($headers))
                 continue;
