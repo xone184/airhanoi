@@ -72,6 +72,9 @@ function handleGetData($type)
             $districtId = $_GET['district_id'] ?? null;
             $limit = $_GET['limit'] ?? 7; // Default 7 days
 
+            $limitDays = max(1, (int) $limit);
+            $maxRows = $limitDays * 30;
+
             $query = "
                 SELECT 
                     f.forecast_id,
@@ -91,18 +94,16 @@ function handleGetData($type)
                 JOIN dim_districts d ON f.district_id = d.district_id
                 JOIN dim_aqi_scale aqs ON f.aqi_level_id = aqs.aqi_level_id
                 WHERE f.forecast_datetime >= DATE_SUB(NOW(), INTERVAL 1 DAY)
-                  AND f.forecast_datetime <= DATE_ADD(NOW(), INTERVAL ? DAY)
+                  AND f.forecast_datetime <= DATE_ADD(NOW(), INTERVAL {$limitDays} DAY)
             ";
 
             $params = [];
-            $params[] = (int) $limit; // limit = number of days forward
             if ($districtId) {
                 $query .= " AND f.district_id = ?";
                 $params[] = $districtId;
             }
 
-            $query .= " GROUP BY f.district_id, f.forecast_datetime ORDER BY f.forecast_datetime ASC LIMIT ?";
-            $params[] = (int) $limit * 30; // 30 districts * limit days
+            $query .= " GROUP BY f.district_id, f.forecast_datetime ORDER BY f.forecast_datetime ASC LIMIT {$maxRows}";
 
             $stmt = $db->prepare($query);
             $stmt->execute($params);
