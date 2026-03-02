@@ -50,7 +50,6 @@ function handleGetData($type)
                         GROUP BY district_id
                     ) aq2 ON aq1.district_id = aq2.district_id 
                         AND aq1.datetime = aq2.max_datetime
-                    GROUP BY aq1.district_id
                 ) aq ON d.district_id = aq.district_id
                 LEFT JOIN dim_aqi_scale aqs ON aq.aqi_level_id = aqs.aqi_level_id
                 ORDER BY d.name
@@ -103,7 +102,7 @@ function handleGetData($type)
                 $params[] = $districtId;
             }
 
-            $query .= " GROUP BY f.district_id, f.forecast_datetime ORDER BY f.forecast_datetime ASC LIMIT {$maxRows}";
+            $query .= " ORDER BY f.forecast_datetime ASC, d.name ASC LIMIT {$maxRows}";
 
             $stmt = $db->prepare($query);
             $stmt->execute($params);
