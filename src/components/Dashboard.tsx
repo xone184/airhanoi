@@ -86,7 +86,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, forecastData, temperatureUn
                 aqi: Math.round(val.total / val.count)
             }))
             .sort((a, b) => new Date(a.rawDate).getTime() - new Date(b.rawDate).getTime())
-            .slice(0, 5);
+            .slice(0, 7);
     }, [forecastData]);
 
     // --- 3. Search Logic ---
@@ -519,7 +519,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, forecastData, temperatureUn
                         <div className="h-48 w-full">
                             {forecastSummary.length > 0 ? (
                                 <ResponsiveContainer width="100%" height="100%">
-                                    <AreaChart data={forecastSummary.slice(0, 5)} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
+                                    <AreaChart data={forecastSummary.slice(0, 7)} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
                                         <defs>
                                             <linearGradient id="colorAqiMini" x1="0" y1="0" x2="0" y2="1">
                                                 <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
