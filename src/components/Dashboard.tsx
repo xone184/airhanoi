@@ -512,7 +512,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, forecastData, temperatureUn
                         <div className="flex justify-between items-center mb-2">
                             <h3 className="text-white font-bold flex items-center gap-2 text-sm">
                                 <TrendingUp size={16} className="text-emerald-400" />
-                                Dự Báo Xu Hướng (5 Ngày)
+                                Dự Báo Xu Hướng (7 Ngày)
                             </h3>
                             {forecastSummary.length === 0 && <span className="text-xs text-orange-400 flex items-center gap-1"><AlertTriangle size={12} /> Chưa có dữ liệu</span>}
                         </div>

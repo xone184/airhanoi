@@ -1,47 +1,19 @@
 <?php
 /**
- * PHPMailer Email API
- * Sử dụng PHPMailer với Gmail SMTP để gửi email
+ * Brevo Transactional Email API
+ * Sử dụng Brevo API (HTTP/curl) để gửi email - không cần thư viện ngoài
  *
  * Endpoints:
- * POST /api/resend_email.php - Gửi email qua Gmail SMTP
+ * POST /api/resend_email.php - Gửi email qua Brevo API
  */
 
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\SMTP;
-use PHPMailer\PHPMailer\Exception;
-
-// Enable Debugging
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-
-// Load PHPMailer classes safely
-$phpMailerPath = __DIR__ . '/libs/PHPMailer-master/src/PHPMailer.php';
-if (!file_exists($phpMailerPath)) {
-    http_response_code(500);
-    echo json_encode(['success' => false, 'error' => 'Server Error: PHPMailer library not found. Check deployment.']);
-    exit;
-}
-
-require __DIR__ . '/libs/PHPMailer-master/src/Exception.php';
-require __DIR__ . '/libs/PHPMailer-master/src/PHPMailer.php';
-require __DIR__ . '/libs/PHPMailer-master/src/SMTP.php';
+// Brevo API Key (set via environment variable BREVO_API_KEY)
+define('BREVO_API_KEY', getenv('BREVO_API_KEY') ?: '');
+define('BREVO_FROM_EMAIL', 'adairhanoi@gmail.com');
+define('BREVO_FROM_NAME', 'AirHanoi');
+define('APP_URL', 'https://xone184.github.io/airhanoi');
 
 require_once 'config.php';
-
-// Safe load mail_config only if exists (it might be ignored in git)
-if (file_exists('mail_config.php')) {
-    require_once 'mail_config.php';
-}
-
-// Fallback to Env Vars if constants not defined
-if (!defined('MAIL_USER'))
-    define('MAIL_USER', getenv('MAIL_USER') ?: '');
-if (!defined('MAIL_PASS'))
-    define('MAIL_PASS', getenv('MAIL_PASS') ?: '');
-if (!defined('MAIL_FROM_NAME'))
-    define('MAIL_FROM_NAME', getenv('MAIL_FROM_NAME') ?: 'AirHanoi');
 
 
 header('Content-Type: application/json');
@@ -127,74 +99,50 @@ function handleSendAlertEmail($data)
 }
 
 /**
- * Send email via PHPMailer with Gmail SMTP
+ * Send email via Brevo Transactional API (HTTP curl)
  */
 function sendEmailViaPHPMailer($to, $subject, $htmlBody)
 {
-    $mail = new PHPMailer(true);
+    $url = 'https://api.brevo.com/v3/smtp/email';
 
+    $payload = json_encode([
+        'sender' => ['name' => BREVO_FROM_NAME, 'email' => BREVO_FROM_EMAIL],
+        'to' => [['email' => $to]],
+        'subject' => $subject,
+        'htmlContent' => $htmlBody,
+        'textContent' => strip_tags(str_replace(['<br>', '</p>'], "\n", $htmlBody)),
+    ]);
 
-    // Server settings
-    // Capture SMTP Debug Output
-    $mail->SMTPDebug = 2; // Logic: 0 = off, 1 = client messages, 2 = client and server messages
-    $mail->Debugoutput = function ($str, $level) {
-        $GLOBALS['smtp_debug'] .= "$level: $str\n";
-    };
-    $GLOBALS['smtp_debug'] = "";
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => $payload,
+        CURLOPT_HTTPHEADER => [
+            'accept: application/json',
+            'api-key: ' . BREVO_API_KEY,
+            'content-type: application/json',
+        ],
+        CURLOPT_TIMEOUT => 15,
+    ]);
 
-    try {
-        // Server settings
-        $mail->isSMTP();
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlError = curl_error($ch);
+    curl_close($ch);
 
-        // Dynamic SMTP Configuration (Supports Brevo/SendGrid)
-        $smtpHost = getenv('SMTP_HOST') ?: 'smtp.googlemail.com';
-        $smtpPort = getenv('SMTP_PORT') ?: 587;
-
-        // Use Hostname directly (Better for Relays/Load Balancers)
-        $mail->Host = $smtpHost;
-
-        $mail->SMTPAuth = true;
-        // Use MAIL_USER/PASS env vars (User updates these on Render)
-        $mail->Username = MAIL_USER;
-        $mail->Password = MAIL_PASS;
-
-        // Security
-        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-        $mail->Port = $smtpPort;
-
-        // Standard STARTTLS settings (now handled above)
-        // $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-        // $mail->Port = 587;
-
-        $mail->SMTPOptions = array(
-            'ssl' => array(
-                'verify_peer' => false,
-                'verify_peer_name' => false,
-                'allow_self_signed' => true
-            )
-        );
-
-        // Recipients
-        $mail->setFrom(MAIL_USER, MAIL_FROM_NAME);
-        $mail->addAddress($to);
-
-        // Content
-        $mail->isHTML(true);
-        $mail->CharSet = 'UTF-8';
-        $mail->Subject = $subject;
-        $mail->Body = $htmlBody;
-        $mail->AltBody = strip_tags(str_replace(['<br>', '</p>'], "\n", $htmlBody));
-
-        $mail->send();
-        return ['success' => true];
-
-    } catch (Exception $e) {
-        // Append Debug Log to error message
-        $debugLog = $GLOBALS['smtp_debug'] ?? 'No debug info';
-        return ['success' => false, 'error' => "Mailer Error: {$mail->ErrorInfo}. Debug: $debugLog"];
-    } catch (\Throwable $e) {
-        return ['success' => false, 'error' => "System Error: " . $e->getMessage()];
+    if ($curlError) {
+        return ['success' => false, 'error' => 'cURL error: ' . $curlError];
     }
+
+    $decoded = json_decode($response, true);
+
+    if ($httpCode >= 200 && $httpCode < 300) {
+        return ['success' => true, 'messageId' => $decoded['messageId'] ?? null];
+    }
+
+    $errMsg = $decoded['message'] ?? $response;
+    return ['success' => false, 'error' => "Brevo API Error ($httpCode): $errMsg"];
 }
 
 /**
@@ -410,7 +358,7 @@ function generateAlertEmailHtml(
 
                                 <!-- CTA -->
                                 <div style='text-align: center; margin-top: 24px;'>
-                                    <a href='http://localhost:5173/'
+                                    <a href='" . APP_URL . "'
                                         style='background: #3b82f6; color: #ffffff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px; display: inline-block;'>
                                         Xem chi tiết trên AirHanoi
                                     </a>
@@ -423,7 +371,7 @@ function generateAlertEmailHtml(
                                     hệ thống AirHanoi.</p>
                                 <p style='font-size: 12px; color: #9ca3af; margin: 4px 0;'>Bạn nhận email này vì đã đăng
                                     ký nhận thông báo khi AQI ≥ $threshold.</p>
-                                <a href='http://localhost:5173/settings'
+                                <a href='" . APP_URL . "'
                                     style='font-size: 12px; color: #3b82f6; text-decoration: underline;'>Thay đổi cài
                                     đặt thông báo</a>
                             </div>

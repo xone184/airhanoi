@@ -89,10 +89,12 @@ function handleGetData($type)
                 FROM fact_forecast f
                 JOIN dim_districts d ON f.district_id = d.district_id
                 JOIN dim_aqi_scale aqs ON f.aqi_level_id = aqs.aqi_level_id
-                WHERE f.forecast_datetime >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+                WHERE f.forecast_datetime >= DATE_SUB(NOW(), INTERVAL 1 DAY)
+                  AND f.forecast_datetime <= DATE_ADD(NOW(), INTERVAL ? DAY)
             ";
 
             $params = [];
+            $params[] = (int) $limit; // limit = number of days forward
             if ($districtId) {
                 $query .= " AND f.district_id = ?";
                 $params[] = $districtId;

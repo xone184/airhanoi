@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { User } from '../types';
-import { KeyRound, Mail, ArrowRight } from 'lucide-react';
+import { KeyRound, Mail, ArrowRight, Eye, EyeOff } from 'lucide-react';
 
 const GOOGLE_CLIENT_ID = '1039750061978-u2agbau434s7l9bu91u0hu7vboun9kgn.apps.googleusercontent.com';
 
@@ -37,6 +37,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => {
     const [loading, setLoading] = useState(false);
     const [googleLoading, setGoogleLoading] = useState(false);
     const [facebookLoading, setFacebookLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
 
     const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost/hanoi-air-quality-monitor/api';
 
@@ -291,7 +292,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => {
                                 <input
                                     type="text"
                                     className="w-full bg-white/10 border border-white/10 rounded-xl py-2.5 pl-10 pr-4 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/60 transition-all"
-                                    placeholder="user@airhanoi.vn"
+                                    placeholder="Nhập email của bạn"
                                     value={username}
                                     onChange={(e) => setUsername(e.target.value)}
                                 />
@@ -303,12 +304,20 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => {
                             <div className="relative">
                                 <KeyRound className="absolute left-3.5 top-3 text-slate-500" size={17} />
                                 <input
-                                    type="password"
-                                    className="w-full bg-white/10 border border-white/10 rounded-xl py-2.5 pl-10 pr-4 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/60 transition-all"
+                                    type={showPassword ? 'text' : 'password'}
+                                    className="w-full bg-white/10 border border-white/10 rounded-xl py-2.5 pl-10 pr-10 text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/60 transition-all"
                                     placeholder="••••••••"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                 />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-3 top-2.5 text-slate-400 hover:text-white transition-colors p-0.5"
+                                    tabIndex={-1}
+                                >
+                                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                </button>
                             </div>
                         </div>
 

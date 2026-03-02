@@ -1,7 +1,7 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { DistrictData, ForecastData } from '../types';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, BarChart, Bar, Cell } from 'recharts';
-import { AlertCircle } from 'lucide-react';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, BarChart, Bar, Cell, LabelList } from 'recharts';
+import { AlertCircle, MapPin, ChevronDown } from 'lucide-react';
 
 interface ForecastProps {
     realtimeData: DistrictData[];
@@ -10,15 +10,30 @@ interface ForecastProps {
 
 const Forecast: React.FC<ForecastProps> = ({ realtimeData, forecastData }) => {
 
-    // Process forecast data to show trend for the whole city (Average AQI per day)
-    const dailyTrend = useMemo(() => {
-        if (!forecastData || forecastData.length === 0) return [];
+    const [selectedDistrict, setSelectedDistrict] = useState<string>('all');
 
-        // Group by datetime (using string date part)
+    // Extract unique districts from forecastData
+    const districtList = useMemo(() => {
+        if (!forecastData || forecastData.length === 0) return [];
+        const unique = [...new Set(forecastData.map(d => d.district))].filter(Boolean).sort();
+        return unique;
+    }, [forecastData]);
+
+    // Filter forecast data by selected district
+    const filteredForecast = useMemo(() => {
+        if (!forecastData || forecastData.length === 0) return [];
+        if (selectedDistrict === 'all') return forecastData;
+        return forecastData.filter(d => d.district === selectedDistrict);
+    }, [forecastData, selectedDistrict]);
+
+    // Process forecast data to show trend (Average AQI per day)
+    const dailyTrend = useMemo(() => {
+        if (filteredForecast.length === 0) return [];
+
         const groups: Record<string, { totalAqi: number, count: number, date: string }> = {};
 
-        forecastData.forEach(item => {
-            const dateKey = item.datetime.split(' ')[0] || item.datetime; // Simple split for "YYYY-MM-DD HH:MM:SS"
+        filteredForecast.forEach(item => {
+            const dateKey = item.datetime.split(' ')[0] || item.datetime;
             if (!groups[dateKey]) {
                 groups[dateKey] = { totalAqi: 0, count: 0, date: dateKey };
             }
@@ -31,16 +46,73 @@ const Forecast: React.FC<ForecastProps> = ({ realtimeData, forecastData }) => {
             aqi: Math.round(g.totalAqi / g.count)
         })).sort((a, b) => new Date(a.name).getTime() - new Date(b.name).getTime());
 
-        return result.slice(0, 7); // Take next 7 days
-    }, [forecastData]);
+        return result.slice(0, 7);
+    }, [filteredForecast]);
+
+    // District comparison data (average AQI per district)
+    const districtComparison = useMemo(() => {
+        if (!forecastData || forecastData.length === 0 || selectedDistrict !== 'all') return [];
+        const groups: Record<string, { totalAqi: number, count: number }> = {};
+        forecastData.forEach(item => {
+            if (!item.district) return;
+            if (!groups[item.district]) {
+                groups[item.district] = { totalAqi: 0, count: 0 };
+            }
+            groups[item.district].totalAqi += item.aqi_forecast;
+            groups[item.district].count += 1;
+        });
+        return Object.entries(groups)
+            .map(([district, g]) => ({
+                district,
+                aqi: Math.round(g.totalAqi / g.count)
+            }))
+            .sort((a, b) => b.aqi - a.aqi);
+    }, [forecastData, selectedDistrict]);
+
+    const getAqiBarColor = (aqi: number) => {
+        if (aqi <= 50) return '#22c55e';
+        if (aqi <= 100) return '#eab308';
+        if (aqi <= 150) return '#f97316';
+        if (aqi <= 200) return '#ef4444';
+        if (aqi <= 300) return '#a855f7';
+        return '#9f1239';
+    };
 
     const hasData = forecastData.length > 0;
 
+    const chartTitle = selectedDistrict === 'all'
+        ? 'Xu Hướng AQI Trung Bình Toàn Hà Nội (7 Ngày Tới)'
+        : `Xu Hướng AQI Dự Báo – ${selectedDistrict} (7 Ngày Tới)`;
+
+    const analysisLabel = selectedDistrict === 'all' ? 'Hà Nội' : selectedDistrict;
+
     return (
         <div className="p-4 lg:p-6 animate-fade-in h-full overflow-y-auto">
-            <header className="mb-4">
-                <h1 className="text-3xl font-bold text-white mb-2">Phân Tích & Dự Báo</h1>
-                <p className="text-slate-400">Dữ liệu từ mô hình AI (Open-Meteo & Tomorrow.io)</p>
+            <header className="mb-4 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+                <div>
+                    <h1 className="text-3xl font-bold text-white mb-2">Phân Tích & Dự Báo</h1>
+                    <p className="text-slate-400">Dữ liệu từ mô hình AI (Open-Meteo & Tomorrow.io)</p>
+                </div>
+
+                {/* District Filter Dropdown */}
+                {hasData && (
+                    <div className="relative shrink-0">
+                        <div className="flex items-center gap-2 bg-slate-800 border border-slate-600 rounded-xl px-3 py-2.5 hover:border-blue-500 transition-colors focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500/30">
+                            <MapPin size={16} className="text-blue-400 shrink-0" />
+                            <select
+                                value={selectedDistrict}
+                                onChange={(e) => setSelectedDistrict(e.target.value)}
+                                className="bg-transparent text-white text-sm font-medium appearance-none outline-none cursor-pointer pr-6 min-w-[160px]"
+                            >
+                                <option value="all" className="bg-slate-800">Toàn thành phố</option>
+                                {districtList.map(d => (
+                                    <option key={d} value={d} className="bg-slate-800">{d}</option>
+                                ))}
+                            </select>
+                            <ChevronDown size={14} className="text-slate-400 absolute right-3 pointer-events-none" />
+                        </div>
+                    </div>
+                )}
             </header>
 
             {!hasData ? (
@@ -53,8 +125,9 @@ const Forecast: React.FC<ForecastProps> = ({ realtimeData, forecastData }) => {
                 </div>
             ) : (
                 <>
+                    {/* Main Trend Chart */}
                     <div className="bg-slate-800 rounded-2xl p-4 border border-slate-700 shadow-xl mb-4">
-                        <h3 className="text-xl font-bold text-white mb-4">Xu Hướng AQI Trung Bình Toàn Hà Nội (5 Ngày Tới)</h3>
+                        <h3 className="text-xl font-bold text-white mb-4">{chartTitle}</h3>
                         <div className="h-80 w-full">
                             <ResponsiveContainer width="100%" height="100%">
                                 <AreaChart data={dailyTrend} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
@@ -81,11 +154,45 @@ const Forecast: React.FC<ForecastProps> = ({ realtimeData, forecastData }) => {
                         </div>
                     </div>
 
+                    {/* District Comparison Bar Chart - Only when viewing ALL districts */}
+                    {selectedDistrict === 'all' && districtComparison.length > 0 && (
+                        <div className="bg-slate-800 rounded-2xl p-4 border border-slate-700 shadow-xl mb-4">
+                            <h3 className="text-xl font-bold text-white mb-4">So Sánh AQI Dự Báo Theo Quận/Huyện</h3>
+                            <div style={{ height: Math.max(300, districtComparison.length * 32) }} className="w-full">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <BarChart data={districtComparison} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#334155" horizontal={false} />
+                                        <XAxis type="number" stroke="#94a3b8" />
+                                        <YAxis
+                                            dataKey="district"
+                                            type="category"
+                                            stroke="#94a3b8"
+                                            width={120}
+                                            tick={{ fontSize: 11 }}
+                                        />
+                                        <Tooltip
+                                            contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#f8fafc' }}
+                                            formatter={(value: number) => [`AQI: ${value}`, 'Dự báo TB']}
+                                        />
+                                        <Bar dataKey="aqi" name="AQI TB" radius={[0, 6, 6, 0]} barSize={18}>
+                                            <LabelList dataKey="aqi" position="right" fill="#e2e8f0" fontSize={11} fontWeight={600} />
+                                            {districtComparison.map((entry, index) => (
+                                                <Cell key={`cell-${index}`} fill={getAqiBarColor(entry.aqi)} />
+                                            ))}
+                                        </Bar>
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+                    )}
+
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
                         <div className="bg-gradient-to-br from-blue-900 to-slate-900 p-4 rounded-2xl border border-blue-800 shadow-lg">
                             <h4 className="text-blue-300 font-bold mb-2 uppercase text-xs tracking-wider">Dữ Liệu Dự Báo</h4>
-                            <div className="text-4xl font-black text-white">{forecastData.length}</div>
-                            <p className="text-xs text-blue-400 mt-2 font-medium">Bản ghi từ mô hình AI</p>
+                            <div className="text-4xl font-black text-white">{filteredForecast.length}</div>
+                            <p className="text-xs text-blue-400 mt-2 font-medium">
+                                {selectedDistrict === 'all' ? 'Bản ghi từ mô hình AI' : `Bản ghi cho ${selectedDistrict}`}
+                            </p>
                         </div>
                         <div className="bg-gradient-to-br from-purple-900 to-slate-900 p-4 rounded-2xl border border-purple-800 shadow-lg">
                             <h4 className="text-purple-300 font-bold mb-2 uppercase text-xs tracking-wider">Xu Hướng Chung</h4>
@@ -95,9 +202,11 @@ const Forecast: React.FC<ForecastProps> = ({ realtimeData, forecastData }) => {
                             <p className="text-xs text-purple-400 mt-2 font-medium">So với ngày hiện tại</p>
                         </div>
                         <div className="bg-gradient-to-br from-emerald-900 to-slate-900 p-4 rounded-2xl border border-emerald-800 shadow-lg">
-                            <h4 className="text-emerald-300 font-bold mb-2 uppercase text-xs tracking-wider">Trạng Thái</h4>
-                            <div className="text-xl font-bold text-white">Đã đồng bộ</div>
-                            <p className="text-xs text-emerald-400 mt-2 font-medium">Sẵn sàng phân tích</p>
+                            <h4 className="text-emerald-300 font-bold mb-2 uppercase text-xs tracking-wider">Khu Vực</h4>
+                            <div className="text-xl font-bold text-white">{selectedDistrict === 'all' ? 'Toàn TP' : selectedDistrict}</div>
+                            <p className="text-xs text-emerald-400 mt-2 font-medium">
+                                {districtList.length} quận/huyện có dữ liệu
+                            </p>
                         </div>
                     </div>
 
@@ -139,7 +248,7 @@ const Forecast: React.FC<ForecastProps> = ({ realtimeData, forecastData }) => {
                                                     Nhận định xu hướng
                                                 </h4>
                                                 <p className="text-slate-300 leading-relaxed text-sm">
-                                                    Dựa trên mô hình dự báo, chất lượng không khí tại Hà Nội có xu hướng <span className={`font-bold ${colorClass}`}>{trendDirection}</span> trong 5 ngày tới.
+                                                    Dựa trên mô hình dự báo, chất lượng không khí tại <span className="font-bold text-white">{analysisLabel}</span> có xu hướng <span className={`font-bold ${colorClass}`}>{trendDirection}</span> trong 7 ngày tới.
                                                     AQI trung bình dự kiến khoảng <span className="font-bold text-white">{Math.round(avgFutureAQI)}</span>.
                                                 </p>
                                             </div>
@@ -152,7 +261,7 @@ const Forecast: React.FC<ForecastProps> = ({ realtimeData, forecastData }) => {
                                                         Cảnh báo cao điểm
                                                     </h4>
                                                     <p className="text-slate-300 leading-relaxed text-sm">
-                                                        Dự báo ngày <span className="font-bold text-white">{new Date(maxDay.name).toLocaleDateString('vi-VN')}</span> sẽ là thời điểm ô nhiễm nhất trong chu kỳ với AQI có thể đạt ngưỡng <span className="font-bold text-orange-400">{maxDay.aqi}</span>.
+                                                        Dự báo ngày <span className="font-bold text-white">{new Date(maxDay.name).toLocaleDateString('vi-VN')}</span> sẽ là thời điểm ô nhiễm nhất {selectedDistrict !== 'all' ? `tại ${selectedDistrict}` : 'trong chu kỳ'} với AQI có thể đạt ngưỡng <span className="font-bold text-orange-400">{maxDay.aqi}</span>.
                                                     </p>
                                                 </div>
                                             )}

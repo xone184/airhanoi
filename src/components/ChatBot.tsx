@@ -191,8 +191,8 @@ const ChatBot: React.FC<ChatBotProps> = ({ data }) => {
                             key={session.id}
                             onClick={() => { setActiveSessionId(session.id); setSidebarOpen(false); }}
                             className={`w-full text-left px-3 py-2.5 rounded-lg text-sm transition-all group flex items-start gap-2 ${session.id === activeSessionId
-                                    ? 'bg-slate-700 text-white'
-                                    : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                                ? 'bg-slate-700 text-white'
+                                : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
                                 }`}
                         >
                             <MessageSquare size={13} className="mt-0.5 flex-shrink-0 opacity-60" />
@@ -243,8 +243,8 @@ const ChatBot: React.FC<ChatBotProps> = ({ data }) => {
                     <button
                         onClick={() => setWebSearchEnabled(!webSearchEnabled)}
                         className={`flex-shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-all border ${webSearchEnabled
-                                ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400'
-                                : 'bg-slate-800 border-slate-700 text-slate-500'
+                            ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400'
+                            : 'bg-slate-800 border-slate-700 text-slate-500'
                             }`}
                     >
                         {webSearchEnabled ? <Globe size={12} /> : <GlobeLock size={12} />}
@@ -257,17 +257,17 @@ const ChatBot: React.FC<ChatBotProps> = ({ data }) => {
                 <div className="flex-1 overflow-y-auto px-3 md:px-6 py-4 space-y-4">
                     {messages.map((msg) => (
                         <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                            <div className={`flex gap-2 md:gap-3 w-full max-w-[90%] md:max-w-[80%] ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
+                            <div className={`flex gap-2 md:gap-3 max-w-[90%] md:max-w-[80%] ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row w-full'}`}>
                                 {/* Avatar */}
                                 <div className={`w-7 h-7 md:w-8 md:h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 ${msg.role === 'user' ? 'bg-blue-600' : 'bg-emerald-600'}`}>
                                     {msg.role === 'user' ? <UserIcon size={13} /> : <Sparkles size={13} />}
                                 </div>
 
-                                <div className="flex flex-col gap-1.5 min-w-0 flex-1">
+                                <div className={`flex flex-col gap-1.5 min-w-0 ${msg.role === 'user' ? '' : 'flex-1'}`}>
                                     {/* Message bubble */}
                                     <div className={`px-3 py-2.5 md:px-4 md:py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-line break-words ${msg.role === 'user'
-                                            ? 'bg-blue-600 text-white rounded-tr-sm'
-                                            : 'bg-slate-800 text-slate-100 rounded-tl-sm border border-slate-700'
+                                        ? 'bg-blue-600 text-white rounded-tr-sm'
+                                        : 'bg-slate-800 text-slate-100 rounded-tl-sm border border-slate-700'
                                         }`}>
                                         {msg.text || (
                                             <span className="flex items-center gap-2 text-slate-400">
