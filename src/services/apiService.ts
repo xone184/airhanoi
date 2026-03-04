@@ -244,34 +244,8 @@ export const api = {
         });
     },
 
-    // Email notifications via Resend
-    async sendTestEmail(payload: { email?: string; subject?: string; message?: string }) {
-        return apiRequest('resend_email.php', {
-            method: 'POST',
-            body: JSON.stringify({
-                action: 'send_test',
-                email: payload.email
-            }),
-        });
-    },
+    // Email functions removed - now using EmailJS in frontend (emailService.ts)
 
-    async sendAqiAlertEmail(payload: {
-        email: string;
-        username: string;
-        district: string;
-        aqi: number;
-        threshold: number;
-        pm25?: number;
-        temperature?: number;
-    }) {
-        return apiRequest('resend_email.php', {
-            method: 'POST',
-            body: JSON.stringify({
-                action: 'send_alert',
-                ...payload
-            }),
-        });
-    },
 
     // Users (admin)
     async getUsers(filters?: { auth_provider?: string; date_from?: string; date_to?: string }) {

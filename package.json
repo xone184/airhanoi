@@ -11,6 +11,7 @@
     "deploy": "gh-pages -d dist"
   },
   "dependencies": {
+    "@emailjs/browser": "^4.4.1",
     "@google/generative-ai": "^0.21.0",
     "@react-email/components": "^1.0.4",
     "docx": "^9.5.1",

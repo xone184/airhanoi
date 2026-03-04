@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { NewsItem } from '../types';
 import { Calendar, User, ArrowRight, ExternalLink, X, Loader2, RefreshCw, Globe, Rss, AlertTriangle } from 'lucide-react';
 import { api } from '../services/apiService';
+import { sendWelcomeEmail } from '../services/emailService';
 
 const NewsFeed: React.FC = () => {
     const [news, setNews] = useState<NewsItem[]>([]);
@@ -88,6 +89,12 @@ const NewsFeed: React.FC = () => {
             if (result.success) {
                 setSubStatus('success');
                 setSubMessage(result.data?.message || 'Đăng ký thành công!');
+
+                // Gửi welcome email qua EmailJS
+                sendWelcomeEmail(email.trim()).catch(err => {
+                    console.warn('Could not send welcome email:', err);
+                });
+
                 setEmail('');
 
                 // Reset message after 5 seconds

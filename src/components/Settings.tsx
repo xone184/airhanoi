@@ -6,6 +6,7 @@ import {
 import { HANOI_DISTRICTS_RAW } from '../constants';
 import { UserSettings } from '../types';
 import { db } from '../services/db'; // Import DB
+import { sendTestEmail as emailjsSendTestEmail } from '../services/emailService';
 
 interface SettingsProps {
     onSettingsUpdated?: (s: UserSettings) => void;
@@ -157,15 +158,15 @@ const Settings: React.FC<SettingsProps> = ({ onSettingsUpdated }) => {
         }
         if (!window.confirm(`Gửi email thử tới ${settings.email}?`)) return;
         try {
-            await db.sendTestEmail({
-                email: settings.email,
-                subject: 'AirHanoi - Email thử nghiệm',
-                message: 'Đây là email thử nghiệm từ AirHanoi. Nếu bạn nhận được, hệ thống gửi mail đã hoạt động.'
-            });
-            alert('Đã gửi email thử. Vui lòng kiểm tra hộp thư (và spam).');
+            const result = await emailjsSendTestEmail(settings.email);
+            if (result.success) {
+                alert('Đã gửi email thử. Vui lòng kiểm tra hộp thư (và spam).');
+            } else {
+                alert(result.error || 'Không thể gửi email thử.');
+            }
         } catch (error: any) {
             console.error('Test email error:', error);
-            alert(error?.message || 'Không thể gửi email thử. Kiểm tra cấu hình SMTP.');
+            alert(error?.message || 'Không thể gửi email thử. Vui lòng thử lại.');
         }
     };
 

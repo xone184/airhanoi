@@ -129,13 +129,7 @@ class DatabaseService {
         }
     }
 
-    async sendTestEmail(payload: { email?: string; subject?: string; message?: string }): Promise<void> {
-        // Use Resend via PHP API
-        const result = await api.sendTestEmail(payload);
-        if (!result.success) {
-            throw new Error(result.error || 'Không thể gửi email thử');
-        }
-    }
+    // sendTestEmail removed - now using EmailJS in frontend (emailService.ts)
 
     // --- USERS (Admin) ---
     async getUsers(filters?: { auth_provider?: string; date_from?: string; date_to?: string }): Promise<AdminUserRow[]> {
