@@ -23,7 +23,7 @@ RUN npm run build
 FROM php:8.2-apache
 
 # Cài đặt extension MySQLi và PDO
-RUN docker-php-ext-install mysqli pdo pdo_mysql
+RUN docker-php-ext-install mysqli pdo pdo_mysql mbstring
 
 # Kích hoạt mod_rewrite cho Apache
 RUN a2enmod rewrite

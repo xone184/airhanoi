@@ -156,15 +156,28 @@ function sendEmailViaPHPMailer($to, $subject, $htmlBody)
 {
     $url = 'https://api.brevo.com/v3/smtp/email';
 
-    $payload = json_encode([
-        'sender' => ['name' => BREVO_FROM_NAME, 'email' => BREVO_FROM_EMAIL],
-        'to' => [['email' => trim($to)]],
+    // Ensure all strings are valid UTF-8
+    $to = mb_convert_encoding(trim($to), 'UTF-8', 'UTF-8');
+    $subject = mb_convert_encoding($subject, 'UTF-8', 'UTF-8');
+    $htmlBody = mb_convert_encoding($htmlBody, 'UTF-8', 'UTF-8');
+    $textContent = strip_tags(str_replace(['<br>', '</p>'], "\n", $htmlBody));
+
+    $data = [
+        'sender' => [
+            'name' => mb_convert_encoding(BREVO_FROM_NAME, 'UTF-8', 'UTF-8'),
+            'email' => BREVO_FROM_EMAIL
+        ],
+        'to' => [
+            ['email' => $to]
+        ],
         'subject' => $subject,
         'htmlContent' => $htmlBody,
-        'textContent' => strip_tags(str_replace(['<br>', '</p>'], "\n", $htmlBody)),
-    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        'textContent' => $textContent,
+    ];
 
-    if (!$payload) {
+    $payload = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+    if ($payload === false) {
         return ['success' => false, 'error' => 'JSON encode failed: ' . json_last_error_msg()];
     }
 
@@ -174,11 +187,11 @@ function sendEmailViaPHPMailer($to, $subject, $htmlBody)
         CURLOPT_POST => true,
         CURLOPT_POSTFIELDS => $payload,
         CURLOPT_HTTPHEADER => [
-            'accept: application/json',
+            'Accept: application/json',
             'api-key: ' . BREVO_API_KEY,
-            'content-type: application/json',
+            'Content-Type: application/json; charset=utf-8',
         ],
-        CURLOPT_TIMEOUT => 15,
+        CURLOPT_TIMEOUT => 30,
     ]);
 
     $response = curl_exec($ch);
