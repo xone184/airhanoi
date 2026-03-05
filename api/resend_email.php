@@ -158,11 +158,15 @@ function sendEmailViaPHPMailer($to, $subject, $htmlBody)
 
     $payload = json_encode([
         'sender' => ['name' => BREVO_FROM_NAME, 'email' => BREVO_FROM_EMAIL],
-        'to' => [['email' => $to]],
+        'to' => [['email' => trim($to)]],
         'subject' => $subject,
         'htmlContent' => $htmlBody,
         'textContent' => strip_tags(str_replace(['<br>', '</p>'], "\n", $htmlBody)),
-    ]);
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+    if (!$payload) {
+        return ['success' => false, 'error' => 'JSON encode failed: ' . json_last_error_msg()];
+    }
 
     $ch = curl_init($url);
     curl_setopt_array($ch, [
