@@ -6,7 +6,7 @@ import {
 import { HANOI_DISTRICTS_RAW } from '../constants';
 import { UserSettings } from '../types';
 import { db } from '../services/db'; // Import DB
-import { sendTestEmail as emailjsSendTestEmail } from '../services/emailService';
+
 
 interface SettingsProps {
     onSettingsUpdated?: (s: UserSettings) => void;
@@ -158,9 +158,15 @@ const Settings: React.FC<SettingsProps> = ({ onSettingsUpdated }) => {
         }
         if (!window.confirm(`Gửi email thử tới ${settings.email}?`)) return;
         try {
-            const result = await emailjsSendTestEmail(settings.email);
+            const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost/hanoi-air-quality-monitor/api';
+            const response = await fetch(`${API_BASE}/resend_email.php`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'send_test', email: settings.email })
+            });
+            const result = await response.json();
             if (result.success) {
-                alert('Đã gửi email thử. Vui lòng kiểm tra hộp thư (và spam).');
+                alert('✅ Đã gửi email thử thành công! Vui lòng kiểm tra hộp thư (và thư mục spam).');
             } else {
                 alert(result.error || 'Không thể gửi email thử.');
             }

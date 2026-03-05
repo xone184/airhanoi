@@ -39,6 +39,9 @@ switch ($action) {
     case 'send_alert':
         handleSendAlertEmail($data);
         break;
+    case 'send_welcome':
+        handleSendWelcomeEmail($data);
+        break;
     default:
         sendError('Unknown action.', 400);
 }
@@ -93,6 +96,54 @@ function handleSendAlertEmail($data)
 
     if ($result['success']) {
         sendSuccess(['message' => 'Email cảnh báo đã được gửi!']);
+    } else {
+        sendError($result['error'], 500);
+    }
+}
+
+/**
+ * Send welcome email to newsletter subscriber
+ */
+function handleSendWelcomeEmail($data)
+{
+    $email = $data['email'] ?? null;
+
+    if (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        sendError('Invalid email address.', 400);
+        return;
+    }
+
+    $html = '
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #1e293b; color: #e2e8f0; padding: 40px 30px; border-radius: 16px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+            <h1 style="color: #38bdf8; margin: 0; font-size: 28px;">🌿 AirHanoi</h1>
+            <p style="color: #94a3b8; margin-top: 8px;">Hệ thống giám sát chất lượng không khí Hà Nội</p>
+        </div>
+        <div style="background: #0f172a; padding: 30px; border-radius: 12px; border: 1px solid #334155;">
+            <h2 style="color: #10b981; margin-top: 0;">🎉 Chào mừng bạn!</h2>
+            <p style="line-height: 1.8;">Cảm ơn bạn đã đăng ký nhận bản tin môi trường từ <strong style="color: #38bdf8;">AirHanoi</strong>.</p>
+            <p style="line-height: 1.8;">Bạn sẽ nhận được:</p>
+            <ul style="line-height: 2; color: #cbd5e1;">
+                <li>📊 Cập nhật chất lượng không khí hàng tuần</li>
+                <li>⚠️ Cảnh báo khi AQI vượt ngưỡng nguy hiểm</li>
+                <li>🏥 Khuyến nghị sức khỏe và lộ trình sạch</li>
+                <li>📰 Tin tức môi trường mới nhất</li>
+            </ul>
+            <div style="text-align: center; margin-top: 24px;">
+                <a href="' . APP_URL . '" style="display: inline-block; background: linear-gradient(135deg, #2563eb, #06b6d4); color: white; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-weight: bold;">
+                    Truy cập AirHanoi
+                </a>
+            </div>
+        </div>
+        <p style="text-align: center; color: #64748b; font-size: 12px; margin-top: 24px;">
+            © ' . date('Y') . ' AirHanoi - Giám sát chất lượng không khí Hà Nội
+        </p>
+    </div>';
+
+    $result = sendEmailViaPHPMailer($email, '🌿 Chào mừng bạn đến với AirHanoi!', $html);
+
+    if ($result['success']) {
+        sendSuccess(['message' => 'Welcome email đã được gửi!']);
     } else {
         sendError($result['error'], 500);
     }

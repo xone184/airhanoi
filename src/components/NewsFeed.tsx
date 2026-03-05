@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { NewsItem } from '../types';
 import { Calendar, User, ArrowRight, ExternalLink, X, Loader2, RefreshCw, Globe, Rss, AlertTriangle } from 'lucide-react';
 import { api } from '../services/apiService';
-import { sendWelcomeEmail } from '../services/emailService';
+
 
 const NewsFeed: React.FC = () => {
     const [news, setNews] = useState<NewsItem[]>([]);
@@ -90,8 +90,13 @@ const NewsFeed: React.FC = () => {
                 setSubStatus('success');
                 setSubMessage(result.data?.message || 'Đăng ký thành công!');
 
-                // Gửi welcome email qua EmailJS
-                sendWelcomeEmail(email.trim()).catch(err => {
+                // Gửi welcome email qua Brevo backend
+                const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost/hanoi-air-quality-monitor/api';
+                fetch(`${API_BASE}/resend_email.php`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'send_welcome', email: email.trim() })
+                }).catch(err => {
                     console.warn('Could not send welcome email:', err);
                 });
 
