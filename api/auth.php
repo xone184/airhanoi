@@ -22,6 +22,12 @@ switch ($action) {
     case 'me':
         handleGetCurrentUser();
         break;
+    case 'google_login':
+        handleOAuthLogin('google');
+        break;
+    case 'facebook_login':
+        handleOAuthLogin('facebook');
+        break;
     default:
         sendError('Invalid action', 400);
 }
@@ -164,6 +170,87 @@ function handleGetCurrentUser()
         'email' => $user['email'],
         'role' => $user['role'],
         'isLoggedIn' => true
+    ]);
+}
+
+function handleOAuthLogin($provider)
+{
+    global $db;
+    $input = getJsonInput();
+
+    $email = sanitize($input['email'] ?? '');
+    $name = sanitize($input['name'] ?? '');
+    
+    if (empty($email)) {
+        sendError('Email is required for OAuth login', 400);
+    }
+
+    // Check if user already exists
+    $stmt = $db->prepare("SELECT * FROM users WHERE email = ?");
+    $stmt->execute([$email]);
+    $user = $stmt->fetch();
+
+    if ($user) {
+        $userId = $user['user_id'];
+        $username = $user['username'];
+        $role = $user['role'];
+        
+        // Update last login
+        try {
+            $updateStmt = $db->prepare("UPDATE users SET last_login = NOW(), auth_provider = ? WHERE user_id = ?");
+            $updateStmt->execute([$provider, $userId]);
+        } catch (PDOException $e) {
+            $updateStmt = $db->prepare("UPDATE users SET last_login = NOW() WHERE user_id = ?");
+            $updateStmt->execute([$userId]);
+        }
+    } else {
+        // Create new user
+        $username = explode('@', $email)[0] . '_' . rand(1000, 9999);
+        $role = 'user';
+        
+        try {
+            $stmt = $db->prepare("
+                INSERT INTO users (username, email, password_hash, full_name, role, is_active, auth_provider) 
+                VALUES (?, ?, ?, ?, 'user', 1, ?)
+            ");
+            $stmt->execute([$username, $email, '', $name, $provider]);
+        } catch (PDOException $e) {
+            $stmt = $db->prepare("
+                INSERT INTO users (username, email, password_hash, full_name, role, is_active) 
+                VALUES (?, ?, ?, ?, 'user', 1)
+            ");
+            $stmt->execute([$username, $email, '', $name]);
+        }
+        
+        $userId = $db->lastInsertId();
+
+        // Create default settings
+        $settingsStmt = $db->prepare("
+            INSERT INTO user_settings (user_id, alert_threshold, enable_email_alerts, language, temperature_unit) 
+            VALUES (?, 150, 1, 'vi', 'c')
+        ");
+        $settingsStmt->execute([$userId]);
+    }
+
+    // Generate token
+    $tokenData = [
+        'user_id' => $userId,
+        'username' => $username,
+        'role' => $role,
+        'exp' => time() + (7 * 24 * 60 * 60)
+    ];
+    $token = base64_encode(json_encode($tokenData));
+
+    sendSuccess([
+        'user' => [
+            'user_id' => $userId,
+            'username' => $username,
+            'email' => $email,
+            'role' => $role,
+            'full_name' => $name,
+            'isLoggedIn' => true
+        ],
+        'token' => $token
     ]);
 }
 
