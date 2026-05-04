@@ -15,10 +15,10 @@ use PHPMailer\PHPMailer\SMTP;
 use PHPMailer\PHPMailer\Exception;
 
 // SMTP Configuration (from environment variables)
-define('SMTP_HOST', getenv('SMTP_HOST') ?: 'smtp-relay.brevo.com');
+define('SMTP_HOST', getenv('SMTP_HOST') ?: 'smtp.gmail.com');
 define('SMTP_PORT', getenv('SMTP_PORT') ?: 587);
-define('SMTP_USER', getenv('SMTP_USER') ?: 'a0345f001@smtp-brevo.com');
-define('SMTP_KEY', getenv('SMTP_KEY') ?: '');
+define('SMTP_USER', getenv('SMTP_USER') ?: 'adairhanoi@gmail.com');
+define('SMTP_KEY', getenv('SMTP_KEY') ?: 'tsvqqishahmibtck');
 define('MAIL_FROM_EMAIL', 'adairhanoi@gmail.com');
 define('MAIL_FROM_NAME', 'AirHanoi');
 define('APP_URL', 'https://xone184.github.io/airhanoi');
