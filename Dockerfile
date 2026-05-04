@@ -22,8 +22,16 @@ RUN npm run build
 # ============================================
 FROM php:8.2-apache
 
+# Cài đặt system dependencies cho PHP extensions và Composer
+RUN apt-get update && apt-get install -y \
+    libonig-dev \
+    libzip-dev \
+    zip \
+    unzip \
+    && rm -rf /var/lib/apt/lists/*
+
 # Cài đặt extension MySQLi, PDO và các tiện ích cần thiết
-RUN docker-php-ext-install mysqli pdo pdo_mysql mbstring
+RUN docker-php-ext-install mysqli pdo pdo_mysql mbstring zip
 
 # Cài đặt Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
