@@ -68,6 +68,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
     const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'verified' | 'rejected'>('all');
     const [filterDate, setFilterDate] = useState<string>('');
     const [viewingReport, setViewingReport] = useState<PollutionReport | null>(null);
+    const [reportPage, setReportPage] = useState(1);
 
     // --- STATE: USERS ---
     const [users, setUsers] = useState<AdminUserRow[]>([]);
@@ -77,6 +78,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
     const [userFilterProvider, setUserFilterProvider] = useState<string>('all');
     const [userDateFrom, setUserDateFrom] = useState<string>('');
     const [userDateTo, setUserDateTo] = useState<string>('');
+    const [userPage, setUserPage] = useState(1);
     const [isUserModalOpen, setIsUserModalOpen] = useState(false);
     const [isEditUserModalOpen, setIsEditUserModalOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<AdminUserRow | null>(null);
@@ -238,6 +240,16 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
         }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     }, [reports, filterStatus, filterDate]);
 
+    useEffect(() => {
+        setReportPage(1);
+    }, [filterStatus, filterDate]);
+
+    const ITEMS_PER_PAGE = 10;
+    const paginatedReports = useMemo(() => {
+        const startIndex = (reportPage - 1) * ITEMS_PER_PAGE;
+        return filteredReports.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+    }, [filteredReports, reportPage]);
+
     const toggleSelectAll = () => {
         if (selectedReportIds.length === filteredReports.length) {
             setSelectedReportIds([]);
@@ -279,6 +291,23 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
     }
 
     // --- HANDLERS: USERS ---
+    const filteredUsers = useMemo(() => {
+        return users.filter(u => {
+            const matchSearch = u.name.toLowerCase().includes(userSearch.toLowerCase()) || u.email.toLowerCase().includes(userSearch.toLowerCase());
+            const matchStatus = userFilterStatus === 'all' || u.status === userFilterStatus;
+            return matchSearch && matchStatus;
+        });
+    }, [users, userSearch, userFilterStatus]);
+
+    useEffect(() => {
+        setUserPage(1);
+    }, [userSearch, userFilterStatus, userFilterProvider, userDateFrom, userDateTo]);
+
+    const paginatedUsers = useMemo(() => {
+        const startIndex = (userPage - 1) * ITEMS_PER_PAGE;
+        return filteredUsers.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+    }, [filteredUsers, userPage]);
+
     const openEditUserModal = (user: AdminUserRow) => {
         setEditUserForm({
             id: user.id,
@@ -692,12 +721,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-800">
-                                    {users
-                                        .filter(u => {
-                                            const matchSearch = u.name.toLowerCase().includes(userSearch.toLowerCase()) || u.email.toLowerCase().includes(userSearch.toLowerCase());
-                                            const matchStatus = userFilterStatus === 'all' || u.status === userFilterStatus;
-                                            return matchSearch && matchStatus;
-                                        })
+                                    {paginatedUsers
                                         .map(user => (
                                             <tr key={user.id} className="hover:bg-slate-800/50 transition-colors">
                                                 <td className="p-4 flex items-center gap-3">
@@ -785,6 +809,29 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                                     )}
                                 </tbody>
                             </table>
+                            {filteredUsers.length > ITEMS_PER_PAGE && (
+                                <div className="p-4 bg-slate-900 border-t border-slate-800 flex justify-between items-center">
+                                    <span className="text-xs text-slate-500 font-medium">
+                                        Hiển thị {(userPage - 1) * ITEMS_PER_PAGE + 1} - {Math.min(userPage * ITEMS_PER_PAGE, filteredUsers.length)} trong số {filteredUsers.length} người dùng
+                                    </span>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => setUserPage(p => Math.max(1, p - 1))}
+                                            disabled={userPage === 1}
+                                            className="px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 disabled:opacity-50 hover:bg-slate-700 transition-colors text-xs font-semibold shadow-sm"
+                                        >
+                                            Trang trước
+                                        </button>
+                                        <button
+                                            onClick={() => setUserPage(p => Math.min(Math.ceil(filteredUsers.length / ITEMS_PER_PAGE), p + 1))}
+                                            disabled={userPage === Math.ceil(filteredUsers.length / ITEMS_PER_PAGE)}
+                                            className="px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 disabled:opacity-50 hover:bg-slate-700 transition-colors text-xs font-semibold shadow-sm"
+                                        >
+                                            Trang sau
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
@@ -866,9 +913,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-800/50">
-                                        {filteredReports.length === 0 ? (
+                                        {paginatedReports.length === 0 ? (
                                             <tr><td colSpan={6} className="p-8 text-center text-slate-500">Không tìm thấy báo cáo nào.</td></tr>
-                                        ) : filteredReports.map((r) => (
+                                        ) : paginatedReports.map((r) => (
                                             <tr key={r.report_id} className={`hover:bg-slate-800/80 transition-colors ${selectedReportIds.includes(r.report_id!) ? 'bg-blue-900/10' : ''}`}>
                                                 <td className="p-4">
                                                     <button onClick={() => toggleSelectOne(r.report_id!)} className="text-slate-400">
@@ -929,8 +976,28 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                                     </tbody>
                                 </table>
                             </div>
-                            <div className="bg-slate-900 p-3 text-xs text-slate-500 text-center border-t border-slate-800">
-                                Hiển thị {filteredReports.length} kết quả
+                            <div className="bg-slate-900 p-3 flex justify-between items-center border-t border-slate-800">
+                                <div className="text-xs text-slate-500">
+                                    Hiển thị {paginatedReports.length > 0 ? (reportPage - 1) * ITEMS_PER_PAGE + 1 : 0} - {Math.min(reportPage * ITEMS_PER_PAGE, filteredReports.length)} trong số {filteredReports.length} báo cáo
+                                </div>
+                                {filteredReports.length > ITEMS_PER_PAGE && (
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => setReportPage(p => Math.max(1, p - 1))}
+                                            disabled={reportPage === 1}
+                                            className="px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 disabled:opacity-50 hover:bg-slate-700 transition-colors text-xs font-semibold shadow-sm"
+                                        >
+                                            Trang trước
+                                        </button>
+                                        <button
+                                            onClick={() => setReportPage(p => Math.min(Math.ceil(filteredReports.length / ITEMS_PER_PAGE), p + 1))}
+                                            disabled={reportPage === Math.ceil(filteredReports.length / ITEMS_PER_PAGE)}
+                                            className="px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 disabled:opacity-50 hover:bg-slate-700 transition-colors text-xs font-semibold shadow-sm"
+                                        >
+                                            Trang sau
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
