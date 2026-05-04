@@ -1,19 +1,27 @@
 <?php
 /**
- * Brevo Transactional Email API
- * Sử dụng Brevo API (HTTP/curl) để gửi email - không cần thư viện ngoài
+ * Email Service - Brevo SMTP via PHPMailer
+ * Gửi email qua Brevo SMTP relay
  *
  * Endpoints:
- * POST /api/resend_email.php - Gửi email qua Brevo API
+ * POST /api/resend_email.php - Gửi email qua Brevo SMTP
  */
 
-// Brevo API Key (set via environment variable BREVO_API_KEY)
-define('BREVO_API_KEY', getenv('BREVO_API_KEY') ?: '');
-define('BREVO_FROM_EMAIL', 'adairhanoi@gmail.com');
-define('BREVO_FROM_NAME', 'AirHanoi');
-define('APP_URL', 'https://xone184.github.io/airhanoi');
-
+require_once __DIR__ . '/vendor/autoload.php';
 require_once 'config.php';
+
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\SMTP;
+use PHPMailer\PHPMailer\Exception;
+
+// SMTP Configuration (from environment variables)
+define('SMTP_HOST', getenv('SMTP_HOST') ?: 'smtp-relay.brevo.com');
+define('SMTP_PORT', getenv('SMTP_PORT') ?: 587);
+define('SMTP_USER', getenv('SMTP_USER') ?: 'a0345f001@smtp-brevo.com');
+define('SMTP_KEY', getenv('SMTP_KEY') ?: '');
+define('MAIL_FROM_EMAIL', 'adairhanoi@gmail.com');
+define('MAIL_FROM_NAME', 'AirHanoi');
+define('APP_URL', 'https://xone184.github.io/airhanoi');
 
 
 header('Content-Type: application/json');
@@ -58,7 +66,7 @@ function handleSendTestEmail($data)
         return;
     }
 
-    $result = sendEmailViaPHPMailer(
+    $result = sendEmailViaSMTP(
         $email,
         '✅ AirHanoi - Email Test Thành Công',
         generateTestEmailHtml()
@@ -92,7 +100,7 @@ function handleSendAlertEmail($data)
     $subject = getAlertSubject($aqi, $district);
     $html = generateAlertEmailHtml($username, $district, $aqi, $threshold, $pm25, $temperature);
 
-    $result = sendEmailViaPHPMailer($email, $subject, $html);
+    $result = sendEmailViaSMTP($email, $subject, $html);
 
     if ($result['success']) {
         sendSuccess(['message' => 'Email cảnh báo đã được gửi!']);
@@ -140,7 +148,7 @@ function handleSendWelcomeEmail($data)
         </p>
     </div>';
 
-    $result = sendEmailViaPHPMailer($email, '🌿 Chào mừng bạn đến với AirHanoi!', $html);
+    $result = sendEmailViaSMTP($email, '🌿 Chào mừng bạn đến với AirHanoi!', $html);
 
     if ($result['success']) {
         sendSuccess(['message' => 'Welcome email đã được gửi!']);
@@ -150,67 +158,40 @@ function handleSendWelcomeEmail($data)
 }
 
 /**
- * Send email via Brevo Transactional API (HTTP curl)
+ * Send email via Brevo SMTP (PHPMailer)
  */
-function sendEmailViaPHPMailer($to, $subject, $htmlBody)
+function sendEmailViaSMTP($to, $subject, $htmlBody)
 {
-    $url = 'https://api.brevo.com/v3/smtp/email';
+    $mail = new PHPMailer(true);
 
-    // Ensure all strings are valid UTF-8
-    $to = mb_convert_encoding(trim($to), 'UTF-8', 'UTF-8');
-    $subject = mb_convert_encoding($subject, 'UTF-8', 'UTF-8');
-    $htmlBody = mb_convert_encoding($htmlBody, 'UTF-8', 'UTF-8');
-    $textContent = strip_tags(str_replace(['<br>', '</p>'], "\n", $htmlBody));
+    try {
+        // SMTP Configuration
+        $mail->isSMTP();
+        $mail->Host = SMTP_HOST;
+        $mail->SMTPAuth = true;
+        $mail->Username = SMTP_USER;
+        $mail->Password = SMTP_KEY;
+        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+        $mail->Port = SMTP_PORT;
+        $mail->CharSet = 'UTF-8';
 
-    $data = [
-        'sender' => [
-            'name' => mb_convert_encoding(BREVO_FROM_NAME, 'UTF-8', 'UTF-8'),
-            'email' => BREVO_FROM_EMAIL
-        ],
-        'to' => [
-            ['email' => $to]
-        ],
-        'subject' => $subject,
-        'htmlContent' => $htmlBody,
-        'textContent' => $textContent,
-    ];
+        // Sender & Recipient
+        $mail->setFrom(MAIL_FROM_EMAIL, MAIL_FROM_NAME);
+        $mail->addAddress(trim($to));
 
-    $payload = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        // Content
+        $mail->isHTML(true);
+        $mail->Subject = $subject;
+        $mail->Body = $htmlBody;
+        $mail->AltBody = strip_tags(str_replace(['<br>', '</p>'], "\n", $htmlBody));
 
-    if ($payload === false) {
-        return ['success' => false, 'error' => 'JSON encode failed: ' . json_last_error_msg()];
+        $mail->send();
+        return ['success' => true];
+
+    } catch (Exception $e) {
+        error_log("SMTP Mail Error: {$mail->ErrorInfo}");
+        return ['success' => false, 'error' => $mail->ErrorInfo];
     }
-
-    $ch = curl_init($url);
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_POST => true,
-        CURLOPT_POSTFIELDS => $payload,
-        CURLOPT_HTTPHEADER => [
-            'Accept: application/json',
-            'api-key: ' . BREVO_API_KEY,
-            'Content-Type: application/json; charset=utf-8',
-        ],
-        CURLOPT_TIMEOUT => 30,
-    ]);
-
-    $response = curl_exec($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $curlError = curl_error($ch);
-    curl_close($ch);
-
-    if ($curlError) {
-        return ['success' => false, 'error' => 'cURL error: ' . $curlError];
-    }
-
-    $decoded = json_decode($response, true);
-
-    if ($httpCode >= 200 && $httpCode < 300) {
-        return ['success' => true, 'messageId' => $decoded['messageId'] ?? null];
-    }
-
-    $errMsg = $decoded['message'] ?? $response;
-    return ['success' => false, 'error' => "Brevo API Error ($httpCode): $errMsg"];
 }
 
 /**

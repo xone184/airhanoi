@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, LineChart, Map, MessageSquare, Database, Settings, HeartPulse, BookOpen, Megaphone, LogOut, ArrowRightLeft, Newspaper, Menu, X, ClipboardList, Navigation, Leaf } from 'lucide-react';
+import { LayoutDashboard, LineChart, Map, MessageSquare, Database, Settings, HeartPulse, BookOpen, Megaphone, LogOut, ArrowRightLeft, Newspaper, Menu, X, ClipboardList, Navigation, Leaf, BarChart3, Bell } from 'lucide-react';
 import { UserRole } from '../types';
 
 interface SidebarProps {
@@ -25,6 +25,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, userRole, on
         { id: 'news', label: t('Tin Tức & Sự Kiện', 'News & Events'), icon: <Newspaper size={20} />, roles: ['admin', 'user'] },
         { id: 'education', label: t('Kiến Thức', 'Knowledge'), icon: <BookOpen size={20} />, roles: ['admin', 'user'] },
         { id: 'report', label: t('Báo Cáo Ô Nhiễm', 'Report Pollution'), icon: <Megaphone size={20} />, roles: ['user'] },
+        { id: 'statistics', label: t('Thống Kê', 'Statistics'), icon: <BarChart3 size={20} />, roles: ['admin', 'user'] },
+        { id: 'notifications', label: t('Thông Báo', 'Notifications'), icon: <Bell size={20} />, roles: ['admin', 'user'] },
         { id: 'chat', label: t('Trợ Lý AI', 'AI Assistant'), icon: <MessageSquare size={20} />, roles: ['admin', 'user'] },
         { id: 'admin', label: t('Quản Trị Hệ Thống', 'System Admin'), icon: <Database size={20} />, roles: ['admin'] },
     ];

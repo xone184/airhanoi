@@ -1,6 +1,6 @@
 <?php
 /**
- * Alert Cron API with PHPMailer Gmail SMTP
+ * Alert Cron API with Brevo API
  * 
  * Ý tưởng sử dụng:
  *  - Dùng Windows Task Scheduler hoặc Cron trên server gọi URL:
@@ -8,20 +8,20 @@
  *  - Script sẽ:
  *      1. Lấy cài đặt từ bảng user_settings + users
  *      2. Lấy AQI hiện tại từ view v_latest_air_quality
- *      3. Nếu AQI >= ngưỡng cảnh báo của user -> gửi email qua Gmail SMTP
+ *      3. Nếu AQI >= ngưỡng cảnh báo của user -> gửi email qua Brevo API
  */
 
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\SMTP;
-use PHPMailer\PHPMailer\Exception;
-
-// Load PHPMailer classes
-require __DIR__ . '/libs/PHPMailer-master/src/Exception.php';
-require __DIR__ . '/libs/PHPMailer-master/src/PHPMailer.php';
-require __DIR__ . '/libs/PHPMailer-master/src/SMTP.php';
-
 require_once 'config.php';
-require_once 'mail_config.php';
+
+// Brevo API config
+if (!defined('BREVO_API_KEY'))
+    define('BREVO_API_KEY', getenv('BREVO_API_KEY') ?: '');
+if (!defined('BREVO_FROM_EMAIL'))
+    define('BREVO_FROM_EMAIL', 'adairhanoi@gmail.com');
+if (!defined('BREVO_FROM_NAME'))
+    define('BREVO_FROM_NAME', getenv('MAIL_FROM_NAME') ?: 'AirHanoi');
+if (!defined('APP_URL'))
+    define('APP_URL', 'https://xone184.github.io/airhanoi');
 
 // Simple security key (thay đổi giá trị này và giữ bí mật)
 $EXPECTED_KEY = 'airhanoi_cron_secret';
@@ -83,7 +83,7 @@ try {
         $pm25 = $row['pm25'] ?? null;
         $temperature = $row['temperature'] ?? null;
 
-        // Gửi email qua PHPMailer
+        // Gửi email qua Brevo API
         $result = sendAlertEmail(
             $email,
             $username,
@@ -102,7 +102,7 @@ try {
     }
 
     sendSuccess([
-        'message' => 'Alert cron executed with Gmail SMTP',
+        'message' => 'Alert cron executed with Brevo API',
         'sent' => $sentCount,
         'errors' => $errors,
     ]);
@@ -181,30 +181,47 @@ function generateAlertEmailHtml($username, $district, $aqi, $threshold, $pm25 = 
 
 function sendAlertEmail($email, $username, $district, $aqi, $threshold, $pm25 = null, $temperature = null)
 {
-    $mail = new PHPMailer(true);
+    $subject = getAlertSubject($aqi, $district);
+    $htmlBody = generateAlertEmailHtml($username, $district, $aqi, $threshold, $pm25, $temperature);
 
-    try {
-        $mail->isSMTP();
-        $mail->Host = 'smtp.gmail.com';
-        $mail->SMTPAuth = true;
-        $mail->Username = MAIL_USER;
-        $mail->Password = MAIL_PASS;
-        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-        $mail->Port = 587;
+    // Send via Brevo API (cURL)
+    $url = 'https://api.brevo.com/v3/smtp/email';
+    $data = [
+        'sender' => ['name' => BREVO_FROM_NAME, 'email' => BREVO_FROM_EMAIL],
+        'to' => [['email' => trim($email)]],
+        'subject' => $subject,
+        'htmlContent' => $htmlBody,
+    ];
 
-        $mail->setFrom(MAIL_USER, MAIL_FROM_NAME);
-        $mail->addAddress($email);
+    $payload = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => $payload,
+        CURLOPT_HTTPHEADER => [
+            'Accept: application/json',
+            'api-key: ' . BREVO_API_KEY,
+            'Content-Type: application/json; charset=utf-8',
+        ],
+        CURLOPT_TIMEOUT => 30,
+    ]);
 
-        $mail->isHTML(true);
-        $mail->CharSet = 'UTF-8';
-        $mail->Subject = getAlertSubject($aqi, $district);
-        $mail->Body = generateAlertEmailHtml($username, $district, $aqi, $threshold, $pm25, $temperature);
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlError = curl_error($ch);
+    curl_close($ch);
 
-        $mail->send();
-        return ['success' => true];
-
-    } catch (Exception $e) {
-        return ['success' => false, 'error' => $mail->ErrorInfo];
+    if ($curlError) {
+        return ['success' => false, 'error' => 'cURL error: ' . $curlError];
     }
+
+    if ($httpCode >= 200 && $httpCode < 300) {
+        return ['success' => true];
+    }
+
+    $decoded = json_decode($response, true);
+    $errMsg = $decoded['message'] ?? $response;
+    return ['success' => false, 'error' => "Brevo API Error ($httpCode): $errMsg"];
 }
 ?>

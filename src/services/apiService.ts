@@ -331,6 +331,42 @@ export const api = {
     async getNewsletterSubscribers() {
         return apiRequest<{ id: number; email: string; subscribed_at: string; status: string }[]>('newsletter.php');
     },
+
+    // Statistics
+    async getStatisticsOverview(days: number = 30) {
+        return apiRequest('statistics.php?type=overview&days=' + days);
+    },
+
+    async getStatisticsRanking(days: number = 30) {
+        return apiRequest('statistics.php?type=ranking&days=' + days);
+    },
+
+    async getStatisticsMonthly() {
+        return apiRequest('statistics.php?type=monthly');
+    },
+
+    // Notifications
+    async getNotifications(page: number = 1, type?: string) {
+        let url = `notifications.php?page=${page}&limit=20`;
+        if (type) url += `&type=${type}`;
+        return apiRequest(url);
+    },
+
+    async getUnreadCount() {
+        return apiRequest('notifications.php?unread=1');
+    },
+
+    async markNotificationRead(id: number) {
+        return apiRequest(`notifications.php?id=${id}`, { method: 'PUT' });
+    },
+
+    async markAllNotificationsRead() {
+        return apiRequest('notifications.php?action=read_all', { method: 'PUT' });
+    },
+
+    async deleteNotification(id: number) {
+        return apiRequest(`notifications.php?id=${id}`, { method: 'DELETE' });
+    },
 };
 
 // Import types

@@ -22,8 +22,11 @@ RUN npm run build
 # ============================================
 FROM php:8.2-apache
 
-# Cài đặt extension MySQLi và PDO
+# Cài đặt extension MySQLi, PDO và các tiện ích cần thiết
 RUN docker-php-ext-install mysqli pdo pdo_mysql mbstring
+
+# Cài đặt Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 # Kích hoạt mod_rewrite cho Apache
 RUN a2enmod rewrite
@@ -38,6 +41,13 @@ COPY 000-default.conf /etc/apache2/sites-available/000-default.conf
 
 # Copy PHP API files
 COPY api/ /var/www/html/api/
+
+# Install PHP dependencies (PHPMailer) via Composer
+WORKDIR /var/www/html/api
+RUN composer install --no-dev --optimize-autoloader --no-interaction
+WORKDIR /var/www/html
+
+# Copy uploads directory
 COPY uploads/ /var/www/html/uploads/
 
 # Copy built React frontend from Stage 1
@@ -47,5 +57,8 @@ COPY --from=frontend-builder /app/dist/ /var/www/html/
 RUN chown -R www-data:www-data /var/www/html/uploads \
     && chmod -R 755 /var/www/html/uploads
 
-# Expose port 80
+# Expose port (Render uses $PORT env var, default 80)
 EXPOSE 80
+
+# Start Apache
+CMD ["apache2-foreground"]

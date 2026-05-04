@@ -20,6 +20,8 @@ const Education = React.lazy(() => import('./components/Education'));
 const ReportPollution = React.lazy(() => import('./components/ReportPollution'));
 const Comparison = React.lazy(() => import('./components/Comparison'));
 const NewsFeed = React.lazy(() => import('./components/NewsFeed'));
+const Statistics = React.lazy(() => import('./components/Statistics'));
+const NotificationCenter = React.lazy(() => import('./components/NotificationCenter'));
 
 // Loading fallback component
 const LoadingFallback = () => (
@@ -281,6 +283,10 @@ const App: React.FC = () => {
                 return <NewsFeed />;
             case 'education':
                 return <Education />;
+            case 'statistics':
+                return <Statistics data={displayData} />;
+            case 'notifications':
+                return <NotificationCenter />;
             case 'report':
                 return <ReportPollution onSubmitReport={handleSubmitReport} />;
             case 'chat':

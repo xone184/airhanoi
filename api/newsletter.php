@@ -2,34 +2,18 @@
 /**
  * Newsletter Subscription API
  * Endpoint: /api/newsletter.php
+ * Uses Brevo API for sending emails
  */
 
-// Use PHPMailer namespace
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception;
-use PHPMailer\PHPMailer\SMTP;
-
-// Load PHPMailer classes (Assuming path relative to api/)
-require __DIR__ . '/libs/PHPMailer-master/src/Exception.php';
-require __DIR__ . '/libs/PHPMailer-master/src/PHPMailer.php';
-require __DIR__ . '/libs/PHPMailer-master/src/SMTP.php';
-
-// config.php handles headers, error reporting, and DB connection
-// config.php handles headers, error reporting, and DB connection
 require_once 'config.php';
 
-// Safe load mail_config only if exists
-if (file_exists('mail_config.php')) {
-    require_once 'mail_config.php';
-}
-
-// Fallback to Env Vars if constants not defined
-if (!defined('MAIL_USER'))
-    define('MAIL_USER', getenv('MAIL_USER') ?: '');
-if (!defined('MAIL_PASS'))
-    define('MAIL_PASS', getenv('MAIL_PASS') ?: '');
-if (!defined('MAIL_FROM_NAME'))
-    define('MAIL_FROM_NAME', getenv('MAIL_FROM_NAME') ?: 'AirHanoi');
+// Brevo API config
+if (!defined('BREVO_API_KEY'))
+    define('BREVO_API_KEY', getenv('BREVO_API_KEY') ?: '');
+if (!defined('BREVO_FROM_EMAIL'))
+    define('BREVO_FROM_EMAIL', 'adairhanoi@gmail.com');
+if (!defined('BREVO_FROM_NAME'))
+    define('BREVO_FROM_NAME', getenv('MAIL_FROM_NAME') ?: 'AirHanoi');
 
 $db = Database::getInstance()->getConnection();
 
@@ -163,95 +147,85 @@ function handleGetSubscribers($db)
 }
 
 /**
- * Send welcome email
+ * Send welcome email via Brevo API
  */
 function sendWelcomeEmail($to)
 {
-    $mail = new PHPMailer(true);
+    $subject = '🌱 Chào mừng bạn đến với Bản tin Môi trường AirHanoi';
 
-    try {
-        // Server settings
-        $mail->isSMTP();
-
-        // Dynamic SMTP Configuration (Supports Brevo/SendGrid)
-        $smtpHost = getenv('SMTP_HOST') ?: 'smtp.googlemail.com';
-        $smtpPort = getenv('SMTP_PORT') ?: 587;
-
-        // Use Hostname directly
-        $mail->Host = $smtpHost;
-
-        $mail->SMTPAuth = true;
-        // Use credentials from mail_config.php or Env Vars
-        $mail->Username = defined('MAIL_USER') ? MAIL_USER : '';
-        $mail->Password = defined('MAIL_PASS') ? MAIL_PASS : '';
-
-        // Standard STARTTLS settings
-        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-        $mail->Port = $smtpPort;
-
-        $mail->SMTPOptions = array(
-            'ssl' => array(
-                'verify_peer' => false,
-                'verify_peer_name' => false,
-                'allow_self_signed' => true
-            )
-        );
-
-        // Recipients
-        $mail->setFrom(defined('MAIL_USER') ? MAIL_USER : 'noreply@airhanoi.com', defined('MAIL_FROM_NAME') ? MAIL_FROM_NAME : 'AirHanoi');
-        $mail->addAddress($to);
-
-        // Content
-        $mail->isHTML(true);
-        $mail->CharSet = 'UTF-8';
-        $mail->Subject = '🌱 Chào mừng bạn đến với Bản tin Môi trường AirHanoi';
-
-        $body = '
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        </head>
-        <body style="font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif; background-color: #f0fdf4; margin: 0; padding: 20px;">
-            <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                <div style="background: #16a34a; padding: 32px; text-align: center;">
-                    <h1 style="color: #ffffff; margin: 0; font-size: 24px;">Đăng Ký Thành Công!</h1>
-                </div>
-                <div style="padding: 32px 24px;">
-                    <p style="font-size: 16px; color: #1f2937; line-height: 24px;">
-                        Xin chào,
-                    </p>
-                    <p style="font-size: 16px; color: #4b5563; line-height: 24px;">
-                        Cảm ơn bạn đã đăng ký nhận bản tin môi trường từ <strong>AirHanoi</strong>. Chúng tôi sẽ gửi cho bạn các thông tin cập nhật hàng tuần về:
-                    </p>
-                    <ul style="color: #4b5563; line-height: 28px; margin-bottom: 24px;">
-                        <li>📉 Chất lượng không khí và dự báo</li>
-                        <li>🌿 Mẹo sống xanh và bảo vệ sức khỏe</li>
-                        <li>📢 Các sự kiện môi trường sắp diễn ra</li>
-                    </ul>
-                    <div style="text-align: center; margin: 32px 0;">
-                        <a href="http://localhost:5173/" style="background: #16a34a; color: #ffffff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600;">Truy cập Website</a>
-                    </div>
-                </div>
-                <div style="background: #fdf2f2; padding: 16px; text-align: center; border-top: 1px solid #fee2e2;">
-                    <p style="font-size: 12px; color: #9ca3af; margin: 0;">
-                        Nếu bạn không thực hiện đăng ký này, vui lòng bỏ qua email này.
-                    </p>
+    $htmlBody = '
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif; background-color: #f0fdf4; margin: 0; padding: 20px;">
+        <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <div style="background: #16a34a; padding: 32px; text-align: center;">
+                <h1 style="color: #ffffff; margin: 0; font-size: 24px;">Đăng Ký Thành Công!</h1>
+            </div>
+            <div style="padding: 32px 24px;">
+                <p style="font-size: 16px; color: #1f2937; line-height: 24px;">Xin chào,</p>
+                <p style="font-size: 16px; color: #4b5563; line-height: 24px;">
+                    Cảm ơn bạn đã đăng ký nhận bản tin môi trường từ <strong>AirHanoi</strong>. Chúng tôi sẽ gửi cho bạn các thông tin cập nhật hàng tuần về:
+                </p>
+                <ul style="color: #4b5563; line-height: 28px; margin-bottom: 24px;">
+                    <li>📉 Chất lượng không khí và dự báo</li>
+                    <li>🌿 Mẹo sống xanh và bảo vệ sức khỏe</li>
+                    <li>📢 Các sự kiện môi trường sắp diễn ra</li>
+                </ul>
+                <div style="text-align: center; margin: 32px 0;">
+                    <a href="https://xone184.github.io/airhanoi" style="background: #16a34a; color: #ffffff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600;">Truy cập Website</a>
                 </div>
             </div>
-        </body>
-        </html>';
+            <div style="background: #fdf2f2; padding: 16px; text-align: center; border-top: 1px solid #fee2e2;">
+                <p style="font-size: 12px; color: #9ca3af; margin: 0;">Nếu bạn không thực hiện đăng ký này, vui lòng bỏ qua email này.</p>
+            </div>
+        </div>
+    </body>
+    </html>';
 
-        $mail->Body = $body;
-        $mail->AltBody = "Cảm ơn bạn đã đăng ký nhận bản tin môi trường từ AirHanoi. Chúng tôi sẽ gửi cho bạn các thông tin cập nhật hàng tuần.";
+    // Send via Brevo API (cURL)
+    $url = 'https://api.brevo.com/v3/smtp/email';
+    $data = [
+        'sender' => ['name' => BREVO_FROM_NAME, 'email' => BREVO_FROM_EMAIL],
+        'to' => [['email' => trim($to)]],
+        'subject' => $subject,
+        'htmlContent' => $htmlBody,
+        'textContent' => 'Cảm ơn bạn đã đăng ký nhận bản tin môi trường từ AirHanoi. Chúng tôi sẽ gửi cho bạn các thông tin cập nhật hàng tuần.',
+    ];
 
-        $mail->send();
-        return ['success' => true];
+    $payload = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => $payload,
+        CURLOPT_HTTPHEADER => [
+            'Accept: application/json',
+            'api-key: ' . BREVO_API_KEY,
+            'Content-Type: application/json; charset=utf-8',
+        ],
+        CURLOPT_TIMEOUT => 30,
+    ]);
 
-    } catch (Exception $e) {
-        // Just log error, don't break the API response if email fails (unless critical)
-        error_log("Mail Error: {$mail->ErrorInfo}");
-        return ['success' => false, 'error' => $mail->ErrorInfo];
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlError = curl_error($ch);
+    curl_close($ch);
+
+    if ($curlError) {
+        error_log("Newsletter Mail cURL Error: $curlError");
+        return ['success' => false, 'error' => $curlError];
     }
+
+    if ($httpCode >= 200 && $httpCode < 300) {
+        return ['success' => true];
+    }
+
+    $decoded = json_decode($response, true);
+    $errMsg = $decoded['message'] ?? $response;
+    error_log("Newsletter Mail Brevo Error ($httpCode): $errMsg");
+    return ['success' => false, 'error' => "Brevo API Error ($httpCode): $errMsg"];
 }
