@@ -1,27 +1,27 @@
 import React, { useState, useEffect, Suspense } from 'react';
-import Sidebar from './components/Sidebar';
-import Login from './components/Login';
-import Register from './components/Register';
+import Sidebar from './components/layouts/Sidebar';
+import Login from './components/pages/Login';
+import Register from './components/pages/Register';
 import { DistrictData, ForecastData, User, PollutionReport, UserSettings } from './types';
 import { MOCK_DATA } from './constants';
 import { db } from './services/db';
 
 // Lazy load heavy components for better initial load time
-const Dashboard = React.lazy(() => import('./components/Dashboard'));
-const SpatialMap = React.lazy(() => import('./components/SpatialMap'));
-const Forecast = React.lazy(() => import('./components/Forecast'));
-const ChatBot = React.lazy(() => import('./components/ChatBot'));
-const AdminPanel = React.lazy(() => import('./components/AdminPanel'));
-const Settings = React.lazy(() => import('./components/Settings'));
-const HealthAdvice = React.lazy(() => import('./components/HealthAdvice'));
-const HealthDiary = React.lazy(() => import('./components/HealthDiary'));
-const CleanRoute = React.lazy(() => import('./components/CleanRoute'));
-const Education = React.lazy(() => import('./components/Education'));
-const ReportPollution = React.lazy(() => import('./components/ReportPollution'));
-const Comparison = React.lazy(() => import('./components/Comparison'));
-const NewsFeed = React.lazy(() => import('./components/NewsFeed'));
-const Statistics = React.lazy(() => import('./components/Statistics'));
-const NotificationCenter = React.lazy(() => import('./components/NotificationCenter'));
+const Dashboard = React.lazy(() => import('./components/pages/Dashboard'));
+const SpatialMap = React.lazy(() => import('./components/pages/SpatialMap'));
+const Forecast = React.lazy(() => import('./components/pages/Forecast'));
+const ChatBot = React.lazy(() => import('./components/ui/ChatBot'));
+const AdminPanel = React.lazy(() => import('./components/pages/AdminPanel'));
+const Settings = React.lazy(() => import('./components/pages/Settings'));
+const HealthAdvice = React.lazy(() => import('./components/pages/HealthAdvice'));
+const HealthDiary = React.lazy(() => import('./components/pages/HealthDiary'));
+const CleanRoute = React.lazy(() => import('./components/pages/CleanRoute'));
+const Education = React.lazy(() => import('./components/pages/Education'));
+const ReportPollution = React.lazy(() => import('./components/pages/ReportPollution'));
+const Comparison = React.lazy(() => import('./components/pages/Comparison'));
+const NewsFeed = React.lazy(() => import('./components/pages/NewsFeed'));
+const Statistics = React.lazy(() => import('./components/pages/Statistics'));
+const NotificationCenter = React.lazy(() => import('./components/ui/NotificationCenter'));
 
 // Loading fallback component
 const LoadingFallback = () => (

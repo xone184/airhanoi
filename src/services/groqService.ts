@@ -3,7 +3,7 @@ import { DistrictData } from "../types";
 // Groq API Configuration
 // Groq API Configuration
 // Call backend proxy instead of direct Groq API
-const GROQ_API_URL = import.meta.env.VITE_API_BASE_URL ? `${import.meta.env.VITE_API_BASE_URL}/chat.php` : "http://localhost/airhanoi/api/chat.php";
+const GROQ_API_URL = import.meta.env.VITE_API_BASE_URL ? `${import.meta.env.VITE_API_BASE_URL}/system/chat.php` : "http://localhost/airhanoi/api/system/chat.php";
 const GROQ_MODEL = "llama-3.3-70b-versatile"; // Fast and powerful
 
 
@@ -98,8 +98,8 @@ interface SearchResult {
 // Web Search function using Tavily API
 const searchWeb = async (query: string, type: 'general' | 'news' = 'news'): Promise<SearchResult[]> => {
     const API_URL = import.meta.env.VITE_API_BASE_URL
-        ? `${import.meta.env.VITE_API_BASE_URL}/web_search.php`
-        : "http://localhost/airhanoi/api/web_search.php";
+        ? `${import.meta.env.VITE_API_BASE_URL}/data/web_search.php`
+        : "http://localhost/airhanoi/api/data/web_search.php";
 
     console.log("🔍 [WebSearch] Calling API:", API_URL);
     console.log("🔍 [WebSearch] Query:", query, "Type:", type);

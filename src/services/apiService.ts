@@ -147,50 +147,50 @@ async function apiUpload(
 export const api = {
     // Authentication
     async login(username: string, password: string) {
-        return apiRequest('auth.php?action=login', {
+        return apiRequest('auth/auth.php?action=login', {
             method: 'POST',
             body: JSON.stringify({ username, password }),
         });
     },
 
     async register(userData: { username: string; email: string; password: string; fullName?: string }) {
-        return apiRequest('auth.php?action=register', {
+        return apiRequest('auth/auth.php?action=register', {
             method: 'POST',
             body: JSON.stringify(userData),
         });
     },
 
     async getCurrentUser() {
-        return apiRequest('auth.php?action=me');
+        return apiRequest('auth/auth.php?action=me');
     },
 
     // Air Quality Data
     async getRealtimeData() {
-        return apiRequest<DistrictData[]>('air_quality.php?type=realtime');
+        return apiRequest<DistrictData[]>('data/air_quality.php?type=realtime');
     },
 
     async getForecastData(districtId?: number, limit?: number) {
-        let url = 'air_quality.php?type=forecast';
+        let url = 'data/air_quality.php?type=forecast';
         if (districtId) url += `&district_id=${districtId}`;
         if (limit) url += `&limit=${limit}`;
         return apiRequest<ForecastData[]>(url);
     },
 
     async getForecastDataAll() {
-        return apiRequest<ForecastData[]>('air_quality.php?type=forecast&limit=210'); // 30 districts * 7 days
+        return apiRequest<ForecastData[]>('data/air_quality.php?type=forecast&limit=210'); // 30 districts * 7 days
     },
 
     async uploadRealtimeCSV(file: File) {
-        return apiUpload('upload.php', file, 'realtime');
+        return apiUpload('data/upload.php', file, 'realtime');
     },
 
     async uploadForecastCSV(file: File) {
-        return apiUpload('upload.php', file, 'forecast');
+        return apiUpload('data/upload.php', file, 'forecast');
     },
 
     // Pollution Reports
     async getReports(filters?: { status?: string; userId?: number; date?: string }) {
-        let url = 'reports.php';
+        let url = 'content/reports.php';
         const params = new URLSearchParams();
         if (filters?.status) params.append('status', filters.status);
         if (filters?.userId) params.append('user_id', filters.userId.toString());
@@ -200,7 +200,7 @@ export const api = {
     },
 
     async createReport(report: Omit<PollutionReport, 'report_id' | 'created_at' | 'status'>) {
-        return apiRequest<PollutionReport>('reports.php', {
+        return apiRequest<PollutionReport>('content/reports.php', {
             method: 'POST',
             body: JSON.stringify(report),
         });
@@ -214,7 +214,7 @@ export const api = {
     },
 
     async bulkUpdateReportStatus(ids: number[], status: 'verified' | 'rejected', reason?: string) {
-        return apiRequest('reports.php', {
+        return apiRequest('content/reports.php', {
             method: 'PUT',
             body: JSON.stringify({ ids, status, reason, action: 'bulk' }),
         });
@@ -222,11 +222,11 @@ export const api = {
 
     // User Settings
     async getSettings() {
-        return apiRequest<UserSettings>('settings.php');
+        return apiRequest<UserSettings>('auth/settings.php');
     },
 
     async updateSettings(settings: Partial<UserSettings>) {
-        return apiRequest('settings.php', {
+        return apiRequest('auth/settings.php', {
             method: 'PUT',
             body: JSON.stringify(settings),
         });
@@ -234,11 +234,11 @@ export const api = {
 
     // System settings (maintenance, refresh interval)
     async getSystemSettings() {
-        return apiRequest('system_settings.php');
+        return apiRequest('system/system_settings.php');
     },
 
     async updateSystemSettings(payload: { maintenanceMode?: boolean; refreshInterval?: string }) {
-        return apiRequest('system_settings.php', {
+        return apiRequest('system/system_settings.php', {
             method: 'PUT',
             body: JSON.stringify(payload),
         });
@@ -258,14 +258,14 @@ export const api = {
     },
 
     async updateUser(userId: number, action: 'ban' | 'activate' | 'promote') {
-        return apiRequest('users.php', {
+        return apiRequest('auth/users.php', {
             method: 'PUT',
             body: JSON.stringify({ user_id: userId, action }),
         });
     },
 
     async updateUserInfo(userId: number, username: string, email: string, role: string) {
-        return apiRequest('users.php', {
+        return apiRequest('auth/users.php', {
             method: 'PUT',
             body: JSON.stringify({
                 user_id: userId,
@@ -278,14 +278,14 @@ export const api = {
     },
 
     async createUser(payload: { username: string; email: string; password: string; role: 'admin' | 'user' }) {
-        return apiRequest('users.php', {
+        return apiRequest('auth/users.php', {
             method: 'POST',
             body: JSON.stringify(payload),
         });
     },
 
     async deleteUser(userId: number) {
-        return apiRequest('users.php', {
+        return apiRequest('auth/users.php', {
             method: 'DELETE',
             body: JSON.stringify({ user_id: userId }),
         });
@@ -293,13 +293,13 @@ export const api = {
 
     // Health Logs
     async getHealthLogs(userId?: number) {
-        let url = 'health.php';
+        let url = 'system/health.php';
         if (userId) url += `?user_id=${userId}`;
         return apiRequest<HealthLog[]>(url);
     },
 
     async createHealthLog(log: Omit<HealthLog, 'id'>) {
-        return apiRequest<HealthLog>('health.php', {
+        return apiRequest<HealthLog>('system/health.php', {
             method: 'POST',
             body: JSON.stringify(log),
         });
@@ -307,7 +307,7 @@ export const api = {
 
     // News
     async getNews(category?: string, limit?: number) {
-        let url = 'news.php';
+        let url = 'content/news.php';
         const params = new URLSearchParams();
         if (category) params.append('category', category);
         if (limit) params.append('limit', limit.toString());
@@ -317,32 +317,32 @@ export const api = {
 
     // Refresh news from external sources (Reddit, Google News)
     async refreshNews() {
-        return apiRequest<{ message: string; inserted: number }>('news.php?action=fetch_external');
+        return apiRequest<{ message: string; inserted: number }>('content/news.php?action=fetch_external');
     },
 
     // Newsletter subscription
     async subscribeNewsletter(email: string) {
-        return apiRequest<{ message: string; subscriber_id?: number; already_subscribed?: boolean }>('newsletter.php', {
+        return apiRequest<{ message: string; subscriber_id?: number; already_subscribed?: boolean }>('content/newsletter.php', {
             method: 'POST',
             body: JSON.stringify({ email }),
         });
     },
 
     async getNewsletterSubscribers() {
-        return apiRequest<{ id: number; email: string; subscribed_at: string; status: string }[]>('newsletter.php');
+        return apiRequest<{ id: number; email: string; subscribed_at: string; status: string }[]>('content/newsletter.php');
     },
 
     // Statistics
     async getStatisticsOverview(days: number = 30) {
-        return apiRequest('statistics.php?type=overview&days=' + days);
+        return apiRequest('data/statistics.php?type=overview&days=' + days);
     },
 
     async getStatisticsRanking(days: number = 30) {
-        return apiRequest('statistics.php?type=ranking&days=' + days);
+        return apiRequest('data/statistics.php?type=ranking&days=' + days);
     },
 
     async getStatisticsMonthly() {
-        return apiRequest('statistics.php?type=monthly');
+        return apiRequest('data/statistics.php?type=monthly');
     },
 
     // Notifications
@@ -353,7 +353,7 @@ export const api = {
     },
 
     async getUnreadCount() {
-        return apiRequest('notifications.php?unread=1');
+        return apiRequest('system/notifications.php?unread=1');
     },
 
     async markNotificationRead(id: number) {
@@ -361,7 +361,7 @@ export const api = {
     },
 
     async markAllNotificationsRead() {
-        return apiRequest('notifications.php?action=read_all', { method: 'PUT' });
+        return apiRequest('system/notifications.php?action=read_all', { method: 'PUT' });
     },
 
     async deleteNotification(id: number) {
