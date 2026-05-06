@@ -20,9 +20,8 @@ if (!defined('DB_CHARSET'))
     define('DB_CHARSET', 'utf8mb4');
 
 // Production: Tắt hiển thị lỗi để tránh lộ thông tin và làm vỡ JSON
-// Development: Bật hiển thị lỗi để debug
 error_reporting(E_ALL);
-ini_set('display_errors', 1);
+ini_set('display_errors', 0);
 
 // CORS Configuration
 // Note: Headers are now handled by Apache Server (000-default.conf)
