@@ -10,6 +10,7 @@
  * GET  /api/statistics.php?type=trends&district_id=1    - Xu hướng theo quận
  * GET  /api/statistics.php?type=yearly_compare          - So sánh AQI từng tháng qua các năm (DB)
  * GET  /api/statistics.php?type=owm_history&year=2023   - Lịch sử AQI từ OpenWeatherMap
+ * POST /api/statistics.php?type=ai_analysis             - Gọi AI phân tích
  */
 
 require_once '../config/config.php';
@@ -52,6 +53,10 @@ switch ($type) {
         break;
     case 'owm_history':
         handleOwmHistory();
+        break;
+    case 'ai_analysis':
+        if ($method !== 'POST') sendError('Method not allowed', 405);
+        handleAiAnalysis();
         break;
     default:
         sendError('Invalid type', 400);
@@ -397,5 +402,73 @@ function handleOwmHistory() {
         'lon'     => $lon,
         'monthly' => $monthly,
     ]);
+}
+
+/**
+ * Gọi Groq API để phân tích dữ liệu
+ */
+function handleAiAnalysis() {
+    $input = json_decode(file_get_contents('php://input'), true);
+    if (!$input || empty($input['yearlyData']) || empty($input['owmData'])) {
+        sendError('Missing data', 400);
+    }
+
+    $groqKey = defined('GROQ_API_KEY') ? GROQ_API_KEY : (getenv('GROQ_API_KEY') ?: '');
+    if (!$groqKey) {
+        $envFile = __DIR__ . '/../../.env';
+        if (file_exists($envFile)) {
+            $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+            foreach ($lines as $line) {
+                if (strpos($line, 'VITE_GROQ_API_KEY=') === 0) {
+                    $groqKey = trim(substr($line, strlen('VITE_GROQ_API_KEY=')));
+                    break;
+                }
+                if (strpos($line, 'GROQ_API_KEY=') === 0) {
+                    $groqKey = trim(substr($line, strlen('GROQ_API_KEY=')));
+                    break;
+                }
+            }
+        }
+    }
+
+    if (!$groqKey) {
+        sendError('GROQ API Key is not configured', 500);
+    }
+
+    $prompt = "Dưới đây là dữ liệu thống kê chất lượng không khí (AQI) trung bình theo tháng qua các năm.\n"
+            . "Dữ liệu từ DB nội bộ: " . json_encode($input['yearlyData']) . "\n"
+            . "Dữ liệu lịch sử từ OpenWeatherMap: " . json_encode($input['owmData']) . "\n\n"
+            . "Hãy đóng vai là một chuyên gia môi trường, phân tích dữ liệu trên và đưa ra nhận định ngắn gọn, súc tích (khoảng 3-4 câu) về:\n"
+            . "1. Xu hướng thay đổi AQI giữa năm nay so với các năm trước.\n"
+            . "2. Dự đoán tình hình ô nhiễm trong các tháng tới dựa trên quy luật mùa (nếu có).\n"
+            . "3. Đưa ra 1 lời khuyên chung cho người dân Hà Nội.\n\n"
+            . "Định dạng trả về: Chỉ trả về đoạn văn bản nhận định, không cần tiêu đề.";
+
+    $ch = curl_init('https://api.groq.com/openai/v1/chat/completions');
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
+        'model' => 'llama3-8b-8192',
+        'messages' => [
+            ['role' => 'user', 'content' => $prompt]
+        ]
+    ]));
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Authorization: Bearer ' . $groqKey,
+        'Content-Type: application/json'
+    ]);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+    
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($httpCode !== 200 || !$response) {
+        sendError('Failed to get analysis from AI', 500);
+    }
+
+    $data = json_decode($response, true);
+    $content = $data['choices'][0]['message']['content'] ?? 'Không có nhận định.';
+    sendSuccess(['analysis' => $content]);
 }
 ?>
