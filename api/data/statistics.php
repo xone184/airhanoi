@@ -54,6 +54,12 @@ switch ($type) {
     case 'yearly_compare':
         handleYearlyCompare($db);
         break;
+    case 'compare_chart':
+        handleCompareChart($db);
+        break;
+    case 'owm_compare':
+        handleOwmCompare();
+        break;
     case 'compare_table':
         handleCompareTable($db);
         break;
@@ -477,9 +483,162 @@ function handleAiAnalysis() {
     sendSuccess(['analysis' => $content]);
 }
 
-/**
- * Lấy dữ liệu cho Bảng so sánh (theo Ngày, Tháng, Năm)
- */
+function handleCompareChart($db) {
+    $mode = $_GET['mode'] ?? 'month';
+    $currentYear = (int)date('Y');
+    $yearsToCompare = [$currentYear, $currentYear - 1, $currentYear - 2];
+    $currentMonth = (int)date('m');
+    $currentDay = (int)date('d');
+
+    $pivot = [];
+    $years = $yearsToCompare;
+
+    if ($mode === 'hour') {
+        for ($i = 0; $i <= 23; $i++) $pivot[$i] = ['period' => str_pad($i, 2, '0', STR_PAD_LEFT) . ':00', 'val_key' => $i];
+        foreach ($yearsToCompare as $y) {
+            $sql = "SELECT HOUR(datetime) as val, ROUND(AVG(aqi), 1) as avg_aqi 
+                    FROM fact_air_quality 
+                    WHERE YEAR(datetime) = ? AND MONTH(datetime) = ? AND DAY(datetime) = ?
+                    GROUP BY HOUR(datetime)";
+            $stmt = $db->prepare($sql);
+            $stmt->execute([$y, $currentMonth, $currentDay]);
+            foreach ($stmt->fetchAll() as $r) {
+                $pivot[(int)$r['val']]["{$y}_avg_aqi"] = (float)$r['avg_aqi'];
+            }
+        }
+    } elseif ($mode === 'day') {
+        for ($i = 1; $i <= 31; $i++) $pivot[$i] = ['period' => 'Ngày ' . $i, 'val_key' => $i];
+        foreach ($yearsToCompare as $y) {
+            $sql = "SELECT DAY(datetime) as val, ROUND(AVG(aqi), 1) as avg_aqi 
+                    FROM fact_air_quality 
+                    WHERE YEAR(datetime) = ? AND MONTH(datetime) = ?
+                    GROUP BY DAY(datetime)";
+            $stmt = $db->prepare($sql);
+            $stmt->execute([$y, $currentMonth]);
+            foreach ($stmt->fetchAll() as $r) {
+                $pivot[(int)$r['val']]["{$y}_avg_aqi"] = (float)$r['avg_aqi'];
+            }
+        }
+    } elseif ($mode === 'month') {
+        for ($i = 1; $i <= 12; $i++) $pivot[$i] = ['period' => 'Tháng ' . $i, 'val_key' => $i];
+        foreach ($yearsToCompare as $y) {
+            $sql = "SELECT MONTH(datetime) as val, ROUND(AVG(aqi), 1) as avg_aqi 
+                    FROM fact_air_quality 
+                    WHERE YEAR(datetime) = ?
+                    GROUP BY MONTH(datetime)";
+            $stmt = $db->prepare($sql);
+            $stmt->execute([$y]);
+            foreach ($stmt->fetchAll() as $r) {
+                $pivot[(int)$r['val']]["{$y}_avg_aqi"] = (float)$r['avg_aqi'];
+            }
+        }
+    } elseif ($mode === 'year') {
+        foreach ($yearsToCompare as $y) $pivot[$y] = ['period' => 'Năm ' . $y, 'val_key' => $y];
+        foreach ($yearsToCompare as $y) {
+            $sql = "SELECT ROUND(AVG(aqi), 1) as avg_aqi 
+                    FROM fact_air_quality 
+                    WHERE YEAR(datetime) = ?";
+            $stmt = $db->prepare($sql);
+            $stmt->execute([$y]);
+            $r = $stmt->fetch();
+            if ($r && $r['avg_aqi'] !== null) {
+                $pivot[$y]["{$y}_avg_aqi"] = (float)$r['avg_aqi'];
+            }
+        }
+    }
+
+    sendSuccess([
+        'pivot' => array_values($pivot),
+        'years' => $years
+    ]);
+}
+
+function handleOwmCompare() {
+    $year = isset($_GET['year']) ? (int)$_GET['year'] : (int)date('Y') - 1;
+    $mode = $_GET['mode'] ?? 'month';
+    $year = max(2020, min((int)date('Y'), $year));
+    
+    $lat = getenv('OWM_LAT') ?: '21.0285';
+    $lon = getenv('OWM_LON') ?: '105.8542';
+    $owmKey = defined('OWM_API_KEY') ? OWM_API_KEY : (getenv('OWM_API_KEY') ?: '');
+    
+    if (!$owmKey) {
+        $envFile = __DIR__ . '/../../.env';
+        if (file_exists($envFile)) {
+            $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+            foreach ($lines as $line) {
+                if (strpos($line, 'VITE_OWM_API_KEY=') === 0) {
+                    $owmKey = trim(substr($line, strlen('VITE_OWM_API_KEY=')));
+                    break;
+                }
+            }
+        }
+    }
+    
+    if (!$owmKey) sendSuccess([]);
+    
+    if ($mode === 'hour') {
+        $start = mktime(0, 0, 0, date('m'), date('d'), $year);
+        $end = mktime(23, 59, 59, date('m'), date('d'), $year);
+    } elseif ($mode === 'day') {
+        $start = mktime(0, 0, 0, date('m'), 1, $year);
+        $end = mktime(23, 59, 59, date('m'), date('t'), $year);
+    } elseif ($mode === 'year') {
+        $start = mktime(0, 0, 0, 1, 1, $year);
+        $end = mktime(23, 59, 59, 12, 31, $year);
+    } else {
+        $start = mktime(0, 0, 0, 1, 1, $year);
+        $end = mktime(23, 59, 59, 12, 31, $year);
+    }
+    
+    if ($start > time()) sendSuccess([]);
+
+    $url = "https://api.openweathermap.org/data/2.5/air_pollution/history?lat={$lat}&lon={$lon}&start={$start}&end={$end}&appid={$owmKey}";
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+    $resp = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    
+    if ($httpCode !== 200 || !$resp) sendSuccess([]);
+    
+    $json = json_decode($resp, true);
+    if (!isset($json['list']) || empty($json['list'])) sendSuccess([]);
+    
+    $grouped = [];
+    foreach ($json['list'] as $item) {
+        $ts = $item['dt'];
+        if ($mode === 'hour') {
+            $key = (int)date('H', $ts);
+        } elseif ($mode === 'day') {
+            $key = (int)date('d', $ts);
+        } elseif ($mode === 'year') {
+            $key = $year;
+        } else {
+            $key = (int)date('m', $ts);
+        }
+        
+        $aqiRaw = $item['main']['aqi'] ?? null;
+        if ($aqiRaw !== null) {
+            if (!isset($grouped[$key])) $grouped[$key] = [];
+            $grouped[$key][] = $aqiRaw;
+        }
+    }
+    
+    $data = [];
+    foreach ($grouped as $k => $vals) {
+        $avgRaw = array_sum($vals) / count($vals);
+        $data[] = [
+            'val_key' => $k,
+            'avg_aqi' => round($avgRaw * 50, 1)
+        ];
+    }
+    
+    sendSuccess($data);
+}
+
 function handleCompareTable($db) {
     $mode = $_GET['mode'] ?? 'month'; // 'year', 'month', 'day', 'hour'
     $days = isset($_GET['days']) ? (int)$_GET['days'] : 30;

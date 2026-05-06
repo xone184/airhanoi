@@ -39,6 +39,7 @@ const Statistics: React.FC<StatisticsProps> = ({ data }) => {
     // Compare Table state
     const [tableData, setTableData] = useState<any[]>([]);
     const [tableMode, setTableMode] = useState<'hour' | 'day' | 'month' | 'year'>('month');
+    const [chartCompare, setChartCompare] = useState<any>(null);
 
     const reportRef = useRef<HTMLDivElement>(null);
 
@@ -109,15 +110,47 @@ const Statistics: React.FC<StatisticsProps> = ({ data }) => {
     useEffect(() => { fetchData(); }, [days]);
 
     useEffect(() => {
-        const fetchTableData = async () => {
+        const fetchTableAndChartData = async () => {
             try {
                 const res = await fetch(`${API_BASE}/data/statistics.php?type=compare_table&mode=${tableMode}&days=${days}`).then(r => r.json());
                 if (res.success) setTableData(res.data);
+
+                const [dbRes, owm2024Res, owm2025Res] = await Promise.all([
+                    fetch(`${API_BASE}/data/statistics.php?type=compare_chart&mode=${tableMode}`).then(r => r.json()),
+                    fetch(`${API_BASE}/data/statistics.php?type=owm_compare&mode=${tableMode}&year=2024`).then(r => r.json()),
+                    fetch(`${API_BASE}/data/statistics.php?type=owm_compare&mode=${tableMode}&year=2025`).then(r => r.json()),
+                ]);
+
+                if (dbRes.success) {
+                    let pivot = dbRes.data.pivot || [];
+                    let years = dbRes.data.years || [];
+
+                    const mergeOwmData = (owmData: any, year: number) => {
+                        if (owmData && owmData.length > 0) {
+                            if (!years.includes(year)) years.push(year);
+                            pivot = pivot.map((p: any) => {
+                                const mData = owmData.find((m: any) => parseInt(m.val_key) === parseInt(p.val_key));
+                                if (mData && mData.avg_aqi !== null) {
+                                    return { ...p, [`${year}_avg_aqi`]: mData.avg_aqi };
+                                }
+                                return p;
+                            });
+                        }
+                    };
+
+                    if (owm2024Res.success) mergeOwmData(owm2024Res.data, 2024);
+                    if (owm2025Res.success) mergeOwmData(owm2025Res.data, 2025);
+
+                    setChartCompare({
+                        pivot: pivot,
+                        years: years.sort()
+                    });
+                }
             } catch (e) {
                 console.error(e);
             }
         };
-        fetchTableData();
+        fetchTableAndChartData();
     }, [tableMode, days]);
 
     const handleGenerateAiAnalysis = async () => {
@@ -287,18 +320,18 @@ const Statistics: React.FC<StatisticsProps> = ({ data }) => {
 
                     {/* Chart Area */}
                     <div className="mb-8">
-                        {tableMode === 'month' ? (
+                        {chartCompare?.pivot && chartCompare.pivot.length > 0 ? (
                             <ResponsiveContainer width="100%" height={380}>
-                                <LineChart data={yearlyCompare?.pivot || []} margin={{ top: 10, right: 30, left: 0, bottom: 10 }}>
+                                <LineChart data={chartCompare.pivot} margin={{ top: 10, right: 30, left: 0, bottom: 10 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                                    <XAxis dataKey="month" tickFormatter={(val) => `Tháng ${val}`} tick={{ fill: '#94a3b8' }} />
+                                    <XAxis dataKey="period" tick={{ fill: '#94a3b8' }} />
                                     <YAxis tick={{ fill: '#94a3b8' }} />
                                     <Tooltip contentStyle={{ backgroundColor: '#1e293b', borderColor: '#475569', borderRadius: 8 }} />
                                     <Legend wrapperStyle={{ paddingTop: 20 }} />
                                     <ReferenceLine y={100} stroke="#f59e0b" strokeDasharray="5 5" label={{ value: 'Kém (100)', fill: '#f59e0b' }} />
                                     <ReferenceLine y={150} stroke="#ef4444" strokeDasharray="5 5" label={{ value: 'Xấu (150)', fill: '#ef4444' }} />
                                     
-                                    {yearlyCompare?.years?.map((year: number, i: number) => {
+                                    {chartCompare.years.map((year: number, i: number) => {
                                         const colors = ['#94a3b8', '#3b82f6', '#f59e0b', '#10b981', '#ec4899'];
                                         const isCurrentYear = year === new Date().getFullYear();
                                         return (
@@ -316,34 +349,9 @@ const Statistics: React.FC<StatisticsProps> = ({ data }) => {
                                 </LineChart>
                             </ResponsiveContainer>
                         ) : (
-                            <ResponsiveContainer width="100%" height={380}>
-                                <LineChart data={[...tableData].reverse()} margin={{ top: 10, right: 30, left: 0, bottom: 10 }}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                                    <XAxis dataKey="period" tick={{ fill: '#94a3b8' }} />
-                                    <YAxis tick={{ fill: '#94a3b8' }} />
-                                    <Tooltip contentStyle={{ backgroundColor: '#1e293b', borderColor: '#475569', borderRadius: 8 }} />
-                                    <Legend wrapperStyle={{ paddingTop: 20 }} />
-                                    <ReferenceLine y={100} stroke="#f59e0b" strokeDasharray="5 5" label={{ value: 'Kém (100)', fill: '#f59e0b' }} />
-                                    <ReferenceLine y={150} stroke="#ef4444" strokeDasharray="5 5" label={{ value: 'Xấu (150)', fill: '#ef4444' }} />
-                                    
-                                    <Line 
-                                        type="monotone" 
-                                        dataKey="avg_aqi" 
-                                        name="AQI Trung bình" 
-                                        stroke="#3b82f6" 
-                                        strokeWidth={3}
-                                        dot={{ r: 3 }} activeDot={{ r: 6 }}
-                                    />
-                                    <Line 
-                                        type="monotone" 
-                                        dataKey="avg_pm25" 
-                                        name="PM2.5 (µg/m³)" 
-                                        stroke="#f59e0b" 
-                                        strokeWidth={2}
-                                        dot={false}
-                                    />
-                                </LineChart>
-                            </ResponsiveContainer>
+                            <div className="flex items-center justify-center h-48 text-slate-500">
+                                <Loader2 className="animate-spin mr-2" /> Đang tải biểu đồ...
+                            </div>
                         )}
                     </div>
 
