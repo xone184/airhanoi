@@ -35,6 +35,10 @@ const Statistics: React.FC<StatisticsProps> = ({ data }) => {
     // AI Analysis states
     const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
     const [analyzing, setAnalyzing] = useState(false);
+    
+    // Compare Table state
+    const [tableData, setTableData] = useState<any[]>([]);
+    const [tableMode, setTableMode] = useState<'day' | 'month' | 'year'>('month');
 
     const reportRef = useRef<HTMLDivElement>(null);
 
@@ -64,6 +68,18 @@ const Statistics: React.FC<StatisticsProps> = ({ data }) => {
     };
 
     useEffect(() => { fetchData(); }, [days]);
+
+    useEffect(() => {
+        const fetchTableData = async () => {
+            try {
+                const res = await fetch(`${API_BASE}/data/statistics.php?type=compare_table&mode=${tableMode}&days=${days}`).then(r => r.json());
+                if (res.success) setTableData(res.data);
+            } catch (e) {
+                console.error(e);
+            }
+        };
+        fetchTableData();
+    }, [tableMode, days]);
 
     const handleGenerateAiAnalysis = async () => {
         if (!yearlyCompare || !owmHistory) return;
@@ -112,6 +128,15 @@ const Statistics: React.FC<StatisticsProps> = ({ data }) => {
     const pieData = (overview?.aqi_distribution || []).map((d: any) => ({ 
         name: d.level_name, value: parseFloat(d.percentage), color: AQI_COLORS[d.level_name] || '#64748b' 
     }));
+
+    const getAqiColorBg = (aqi: number) => {
+        if (aqi <= 50) return 'bg-emerald-500/20 text-emerald-400';
+        if (aqi <= 100) return 'bg-yellow-500/20 text-yellow-400';
+        if (aqi <= 150) return 'bg-orange-500/20 text-orange-400';
+        if (aqi <= 200) return 'bg-red-500/20 text-red-400';
+        if (aqi <= 300) return 'bg-purple-500/20 text-purple-400';
+        return 'bg-rose-700/20 text-rose-400';
+    };
 
     return (
         <div className="p-6 lg:p-10 animate-fade-in h-full overflow-y-auto pb-20">
@@ -193,6 +218,63 @@ const Statistics: React.FC<StatisticsProps> = ({ data }) => {
                         <KPICard icon={<Calendar size={20} />} label="Dữ liệu" value={`${ov.total_records} mẫu`} color="emerald" />
                     </div>
                 )}
+
+                {/* Bảng Dữ Liệu Chi Tiết */}
+                <div className="bg-slate-800 rounded-2xl p-6 border border-slate-700 mb-8">
+                    <div className="flex items-center justify-between mb-6">
+                        <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                            <Table2 className="text-emerald-400" size={20} /> Bảng Tổng Hợp Dữ Liệu
+                        </h3>
+                        <div className="flex gap-2">
+                            {(['day', 'month', 'year'] as const).map(m => (
+                                <button 
+                                    key={m} 
+                                    onClick={() => setTableMode(m)}
+                                    className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${
+                                        tableMode === m 
+                                        ? 'bg-emerald-600 border-emerald-500 text-white' 
+                                        : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-slate-200'
+                                    }`}
+                                >
+                                    Theo {m === 'day' ? 'Ngày' : m === 'month' ? 'Tháng' : 'Năm'}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left text-sm text-slate-300 whitespace-nowrap">
+                            <thead className="bg-slate-900/80 text-slate-400 text-xs uppercase">
+                                <tr>
+                                    <th className="px-4 py-3 rounded-tl-lg">Thời Gian</th>
+                                    <th className="px-4 py-3">AQI (TB)</th>
+                                    <th className="px-4 py-3">PM2.5 (TB)</th>
+                                    <th className="px-4 py-3">AQI Cao nhất</th>
+                                    <th className="px-4 py-3">AQI Thấp nhất</th>
+                                    <th className="px-4 py-3 rounded-tr-lg text-right">Số Mẫu Đo</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-700">
+                                {tableData.length > 0 ? tableData.map((row, idx) => (
+                                    <tr key={idx} className="hover:bg-slate-700/30 transition-colors">
+                                        <td className="px-4 py-3 font-medium text-white">{row.period}</td>
+                                        <td className="px-4 py-3">
+                                            <span className={`px-2 py-1 rounded-md text-xs font-bold border border-current border-opacity-20 ${getAqiColorBg(row.avg_aqi)}`}>
+                                                {row.avg_aqi}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-3">{row.avg_pm25} µg</td>
+                                        <td className="px-4 py-3 text-red-400">{row.max_aqi}</td>
+                                        <td className="px-4 py-3 text-emerald-400">{row.min_aqi}</td>
+                                        <td className="px-4 py-3 text-slate-500 text-right">{row.total_records}</td>
+                                    </tr>
+                                )) : (
+                                    <tr><td colSpan={6} className="text-center py-6 text-slate-500">Chưa có dữ liệu</td></tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
 
                 {/* So Sánh Theo Năm (DB System) */}
                 {yearlyCompare?.pivot && yearlyCompare.pivot.length > 0 && (

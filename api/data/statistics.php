@@ -54,6 +54,9 @@ switch ($type) {
     case 'yearly_compare':
         handleYearlyCompare($db);
         break;
+    case 'compare_table':
+        handleCompareTable($db);
+        break;
     case 'owm_history':
         handleOwmHistory();
         break;
@@ -472,5 +475,56 @@ function handleAiAnalysis() {
     $data = json_decode($response, true);
     $content = $data['choices'][0]['message']['content'] ?? 'Không có nhận định.';
     sendSuccess(['analysis' => $content]);
+}
+
+/**
+ * Lấy dữ liệu cho Bảng so sánh (theo Ngày, Tháng, Năm)
+ */
+function handleCompareTable($db) {
+    $mode = $_GET['mode'] ?? 'month'; // 'year', 'month', 'day'
+    $days = isset($_GET['days']) ? (int)$_GET['days'] : 30;
+
+    if ($mode === 'year') {
+        $groupBy = "YEAR(datetime)";
+        $selectDate = "YEAR(datetime) as period";
+        $where = "1=1"; 
+        $limit = 10;
+    } elseif ($mode === 'month') {
+        $groupBy = "DATE_FORMAT(datetime, '%Y-%m')";
+        $selectDate = "DATE_FORMAT(datetime, '%Y-%m') as period";
+        $where = "1=1"; 
+        $limit = 24;
+    } else {
+        $groupBy = "DATE(datetime)";
+        $selectDate = "DATE(datetime) as period";
+        $where = "datetime >= DATE_SUB(NOW(), INTERVAL ? DAY)";
+        $limit = 90;
+    }
+
+    $sql = "
+        SELECT 
+            $selectDate,
+            ROUND(AVG(aqi), 1) as avg_aqi,
+            ROUND(AVG(pm25), 1) as avg_pm25,
+            ROUND(MAX(aqi), 0) as max_aqi,
+            ROUND(MIN(aqi), 0) as min_aqi,
+            COUNT(*) as total_records
+        FROM fact_air_quality
+    ";
+    
+    if ($mode === 'day') {
+        $sql .= " WHERE $where ";
+    }
+    
+    $sql .= " GROUP BY $groupBy ORDER BY period DESC LIMIT $limit";
+
+    $stmt = $db->prepare($sql);
+    if ($mode === 'day') {
+        $stmt->execute([$days]);
+    } else {
+        $stmt->execute();
+    }
+
+    sendSuccess($stmt->fetchAll());
 }
 ?>
