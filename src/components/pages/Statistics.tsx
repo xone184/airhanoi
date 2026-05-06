@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-    BarChart3, TrendingUp, TrendingDown, Download, FileText, Table2,
-    Calendar, MapPin, AlertTriangle, CheckCircle, Loader2, RefreshCw,
-    ArrowUpRight, ArrowDownRight, Minus, PieChart
+    BarChart3, TrendingUp, Download, FileText, Table2,
+    Calendar, AlertTriangle, Loader2, RefreshCw,
+    PieChart, Brain, History, Sparkles, AlertCircle
 } from 'lucide-react';
 import { DistrictData } from '../../types';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RechartPie, Pie, Cell, LineChart, Line, Legend } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RechartPie, Pie, Cell, LineChart, Line, Legend, ReferenceLine } from 'recharts';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { aiService } from '../../services/aiService';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost/doan_airhanoi/api';
 
@@ -15,39 +16,46 @@ interface StatisticsProps {
     data: DistrictData[];
 }
 
-// AQI color palette
 const AQI_COLORS: Record<string, string> = {
-    'Tốt': '#10B981',
-    'Trung bình': '#F59E0B',
-    'Kém': '#F97316',
-    'Xấu': '#EF4444',
-    'Rất xấu': '#8B5CF6',
-    'Nguy hại': '#DC2626',
+    'Tốt': '#10B981', 'Trung bình': '#F59E0B', 'Kém': '#F97316',
+    'Xấu': '#EF4444', 'Rất xấu': '#8B5CF6', 'Nguy hại': '#DC2626',
 };
 
 const Statistics: React.FC<StatisticsProps> = ({ data }) => {
     const [overview, setOverview] = useState<any>(null);
     const [ranking, setRanking] = useState<any>(null);
-    const [monthly, setMonthly] = useState<any[]>([]);
+    const [yearlyCompare, setYearlyCompare] = useState<any>(null);
+    const [owmHistory, setOwmHistory] = useState<any>(null);
+    
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [days, setDays] = useState(30);
     const [exporting, setExporting] = useState(false);
+    
+    // AI Analysis states
+    const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
+    const [analyzing, setAnalyzing] = useState(false);
+
     const reportRef = useRef<HTMLDivElement>(null);
 
     const fetchData = async () => {
         setLoading(true);
         setError(null);
         try {
-            const [ovRes, rankRes, monthRes] = await Promise.all([
+            const currentYear = new Date().getFullYear();
+            const lastYear = currentYear - 1;
+
+            const [ovRes, rankRes, yearlyRes, owmRes] = await Promise.all([
                 fetch(`${API_BASE}/data/statistics.php?type=overview&days=${days}`).then(r => r.json()),
                 fetch(`${API_BASE}/data/statistics.php?type=ranking&days=${days}`).then(r => r.json()),
-                fetch(`${API_BASE}/data/statistics.php?type=monthly`).then(r => r.json()),
+                fetch(`${API_BASE}/data/statistics.php?type=yearly_compare`).then(r => r.json()),
+                fetch(`${API_BASE}/data/statistics.php?type=owm_history&year=${lastYear}`).then(r => r.json()),
             ]);
 
             if (ovRes.success) setOverview(ovRes.data);
             if (rankRes.success) setRanking(rankRes.data);
-            if (monthRes.success) setMonthly(monthRes.data);
+            if (yearlyRes.success) setYearlyCompare(yearlyRes.data);
+            if (owmRes.success) setOwmHistory(owmRes.data);
         } catch (err: any) {
             setError(err.message || 'Không thể tải dữ liệu thống kê');
         } finally {
@@ -57,7 +65,20 @@ const Statistics: React.FC<StatisticsProps> = ({ data }) => {
 
     useEffect(() => { fetchData(); }, [days]);
 
-    // --- EXPORT PDF ---
+    const handleGenerateAiAnalysis = async () => {
+        if (!yearlyCompare || !owmHistory) return;
+        setAnalyzing(true);
+        try {
+            const result = await aiService.analyzeYearlyTrend(yearlyCompare.summaries, owmHistory.monthly);
+            setAiAnalysis(result);
+        } catch (err) {
+            console.error(err);
+            setAiAnalysis('Không thể kết nối đến AI. Vui lòng thử lại sau.');
+        } finally {
+            setAnalyzing(false);
+        }
+    };
+
     const exportPDF = async () => {
         if (!reportRef.current) return;
         setExporting(true);
@@ -70,43 +91,27 @@ const Statistics: React.FC<StatisticsProps> = ({ data }) => {
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
             pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-            pdf.save(`AirHanoi_ThongKe_${days}ngay_${new Date().toISOString().slice(0, 10)}.pdf`);
+            pdf.save(`AirHanoi_BaoCao_${new Date().toISOString().slice(0, 10)}.pdf`);
         } catch (err) {
-            console.error('Export PDF error:', err);
-            alert('Không thể xuất PDF. Vui lòng thử lại.');
+            alert('Không thể xuất PDF.');
         } finally {
             setExporting(false);
         }
-    };
-
-    // --- EXPORT CSV ---
-    const exportCSV = () => {
-        if (!ranking?.all_districts) return;
-        const headers = 'Quận/Huyện,AQI TB,PM2.5 TB,AQI Max,AQI Min,Mức độ\n';
-        const rows = ranking.all_districts.map((d: any) =>
-            `"${d.district}",${d.avg_aqi},${d.avg_pm25},${d.max_aqi},${d.min_aqi},"${d.dominant_level}"`
-        ).join('\n');
-        const blob = new Blob(['\ufeff' + headers + rows], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `AirHanoi_XepHang_${days}ngay.csv`;
-        a.click();
-        URL.revokeObjectURL(url);
     };
 
     if (loading) {
         return (
             <div className="flex items-center justify-center h-full min-h-[400px]">
                 <Loader2 className="animate-spin text-blue-500 mr-3" size={32} />
-                <span className="text-slate-400">Đang tải thống kê...</span>
+                <span className="text-slate-400">Đang tải thống kê & phân tích...</span>
             </div>
         );
     }
 
     const ov = overview?.overview;
-    const dist = overview?.aqi_distribution || [];
-    const pieData = dist.map((d: any) => ({ name: d.level_name, value: parseFloat(d.percentage), color: AQI_COLORS[d.level_name] || '#64748b' }));
+    const pieData = (overview?.aqi_distribution || []).map((d: any) => ({ 
+        name: d.level_name, value: parseFloat(d.percentage), color: AQI_COLORS[d.level_name] || '#64748b' 
+    }));
 
     return (
         <div className="p-6 lg:p-10 animate-fade-in h-full overflow-y-auto pb-20">
@@ -114,30 +119,22 @@ const Statistics: React.FC<StatisticsProps> = ({ data }) => {
             <header className="mb-8 flex flex-col md:flex-row justify-between md:items-end gap-4">
                 <div>
                     <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3">
-                        <BarChart3 className="text-blue-400" size={28} /> Thống Kê & Báo Cáo
+                        <BarChart3 className="text-blue-400" size={28} /> Thống Kê & Phân Tích AI
                     </h1>
-                    <p className="text-slate-400">Phân tích tổng hợp chất lượng không khí Hà Nội</p>
+                    <p className="text-slate-400">So sánh chất lượng không khí qua các năm và nhận định từ AI</p>
                 </div>
                 <div className="flex items-center gap-3 flex-wrap">
-                    {/* Period selector */}
                     <select value={days} onChange={e => setDays(Number(e.target.value))}
                         className="bg-slate-800 border border-slate-700 text-white px-3 py-2 rounded-lg text-sm">
-                        <option value={7}>7 ngày</option>
-                        <option value={30}>30 ngày</option>
-                        <option value={90}>90 ngày</option>
-                        <option value={180}>6 tháng</option>
-                        <option value={365}>1 năm</option>
+                        <option value={7}>7 ngày</option><option value={30}>30 ngày</option>
+                        <option value={90}>90 ngày</option><option value={365}>1 năm</option>
                     </select>
-                    <button onClick={fetchData} className="p-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg border border-slate-700 transition-colors" title="Làm mới">
+                    <button onClick={fetchData} className="p-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg border border-slate-700">
                         <RefreshCw size={18} />
                     </button>
-                    <button onClick={exportCSV} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-invariant-white rounded-lg text-sm font-bold transition-colors">
-                        <Table2 size={16} /> Xuất CSV
-                    </button>
-                    <button onClick={exportPDF} disabled={exporting}
-                        className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-500 disabled:bg-slate-700 text-white text-invariant-white rounded-lg text-sm font-bold transition-colors">
+                    <button onClick={exportPDF} disabled={exporting} className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg text-sm font-bold">
                         {exporting ? <Loader2 size={16} className="animate-spin" /> : <FileText size={16} />}
-                        {exporting ? 'Đang xuất...' : 'Xuất PDF'}
+                        Xuất Báo Cáo
                     </button>
                 </div>
             </header>
@@ -148,35 +145,144 @@ const Statistics: React.FC<StatisticsProps> = ({ data }) => {
                 </div>
             )}
 
-            {/* Printable report area */}
             <div ref={reportRef}>
+                {/* AI Analysis Section */}
+                <div className="bg-gradient-to-r from-indigo-900/40 to-purple-900/40 border border-indigo-500/30 rounded-2xl p-6 mb-8 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-4 opacity-10">
+                        <Brain size={120} />
+                    </div>
+                    <div className="relative z-10">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                                <Sparkles className="text-amber-400" size={24} /> 
+                                AI Chuyên Gia Nhận Định
+                            </h3>
+                            {!aiAnalysis && !analyzing && (
+                                <button onClick={handleGenerateAiAnalysis} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium flex items-center gap-2 transition-colors">
+                                    <Brain size={16} /> Phân tích ngay
+                                </button>
+                            )}
+                        </div>
+                        
+                        {analyzing ? (
+                            <div className="flex items-center gap-3 text-indigo-300 py-6">
+                                <Loader2 className="animate-spin" size={24} />
+                                <p className="animate-pulse">AI đang phân tích dữ liệu so sánh các năm và dữ liệu vệ tinh OpenWeatherMap...</p>
+                            </div>
+                        ) : aiAnalysis ? (
+                            <div className="bg-slate-900/60 p-5 rounded-xl border border-indigo-500/20 backdrop-blur-sm">
+                                <p className="text-slate-200 leading-relaxed whitespace-pre-line text-lg">{aiAnalysis}</p>
+                                <div className="mt-4 flex justify-end">
+                                    <button onClick={handleGenerateAiAnalysis} className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1">
+                                        <RefreshCw size={12} /> Phân tích lại
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <p className="text-slate-400 py-2">Nhấn nút bên trên để AI tổng hợp dữ liệu lịch sử từ trạm đo và OpenWeatherMap, sau đó đưa ra dự báo xu hướng.</p>
+                        )}
+                    </div>
+                </div>
+
                 {/* KPI Cards */}
                 {ov && (
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                        <KPICard icon={<BarChart3 size={20} />} label="AQI Trung bình" value={ov.avg_aqi} color="blue"
-                            sub={`Min: ${ov.min_aqi} / Max: ${ov.max_aqi}`} />
-                        <KPICard icon={<TrendingUp size={20} />} label="PM2.5 TB" value={`${ov.avg_pm25} µg/m³`} color="orange" sub={`PM10 TB: ${ov.avg_pm10}`} />
-                        <KPICard icon={<AlertTriangle size={20} />} label="Lần vượt ngưỡng" value={overview.threshold_violations} color="red"
-                            sub={`AQI ≥ 150 trong ${days} ngày`} />
-                        <KPICard icon={<Calendar size={20} />} label="Dữ liệu" value={`${ov.total_days} ngày`} color="emerald"
-                            sub={`${ov.total_records} bản ghi`} />
+                        <KPICard icon={<BarChart3 size={20} />} label={`AQI TB (${days} ngày)`} value={ov.avg_aqi} color="blue" />
+                        <KPICard icon={<TrendingUp size={20} />} label="PM2.5 TB" value={`${ov.avg_pm25} µg`} color="orange" />
+                        <KPICard icon={<AlertTriangle size={20} />} label="Vượt ngưỡng" value={overview.threshold_violations} color="red" />
+                        <KPICard icon={<Calendar size={20} />} label="Dữ liệu" value={`${ov.total_records} mẫu`} color="emerald" />
                     </div>
                 )}
 
-                {/* Charts row */}
+                {/* So Sánh Theo Năm (DB System) */}
+                {yearlyCompare?.pivot && yearlyCompare.pivot.length > 0 && (
+                    <div className="bg-slate-800 rounded-2xl p-6 border border-slate-700 mb-8">
+                        <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                            <History className="text-blue-400" size={20} /> 
+                            So sánh xu hướng AQI theo tháng qua các năm (Dữ liệu trạm đo)
+                        </h3>
+                        <p className="text-slate-400 text-sm mb-6">Biểu đồ thể hiện mức độ ô nhiễm trung bình từng tháng trong năm nay so với các năm trước.</p>
+                        
+                        <ResponsiveContainer width="100%" height={380}>
+                            <LineChart data={yearlyCompare.pivot} margin={{ top: 10, right: 30, left: 0, bottom: 10 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                                <XAxis dataKey="month" tickFormatter={(val) => `Tháng ${val}`} tick={{ fill: '#94a3b8' }} />
+                                <YAxis tick={{ fill: '#94a3b8' }} />
+                                <Tooltip contentStyle={{ backgroundColor: '#1e293b', borderColor: '#475569', borderRadius: 8 }} />
+                                <Legend wrapperStyle={{ paddingTop: 20 }} />
+                                <ReferenceLine y={100} stroke="#f59e0b" strokeDasharray="5 5" label={{ value: 'Kém (100)', fill: '#f59e0b' }} />
+                                <ReferenceLine y={150} stroke="#ef4444" strokeDasharray="5 5" label={{ value: 'Xấu (150)', fill: '#ef4444' }} />
+                                
+                                {yearlyCompare.years.map((year: number, i: number) => {
+                                    const colors = ['#94a3b8', '#3b82f6', '#f59e0b', '#10b981', '#ec4899'];
+                                    const isCurrentYear = year === new Date().getFullYear();
+                                    return (
+                                        <Line 
+                                            key={year}
+                                            type="monotone" 
+                                            dataKey={`${year}_avg_aqi`} 
+                                            name={`Năm ${year}`} 
+                                            stroke={isCurrentYear ? '#3b82f6' : colors[i % colors.length]} 
+                                            strokeWidth={isCurrentYear ? 3 : 2}
+                                            strokeDasharray={isCurrentYear ? "" : "5 5"}
+                                            dot={{ r: 4 }} activeDot={{ r: 7 }}
+                                        />
+                                    );
+                                })}
+                            </LineChart>
+                        </ResponsiveContainer>
+                    </div>
+                )}
+
+                {/* OpenWeatherMap History */}
+                {owmHistory?.monthly && owmHistory.monthly.length > 0 && (
+                    <div className="bg-slate-800 rounded-2xl p-6 border border-slate-700 mb-8">
+                        <div className="flex items-center justify-between mb-6">
+                            <div>
+                                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                                    <BarChart3 className="text-cyan-400" size={20} /> 
+                                    Dữ liệu đối chiếu vệ tinh OpenWeatherMap ({owmHistory.year})
+                                </h3>
+                                <p className="text-slate-400 text-sm mt-1">Dữ liệu diện rộng khu vực Hà Nội (Lat: {owmHistory.lat}, Lon: {owmHistory.lon})</p>
+                            </div>
+                            <div className="bg-slate-900 px-3 py-1 rounded-lg border border-slate-700 text-xs text-slate-400">
+                                Nguồn: OpenWeather API
+                            </div>
+                        </div>
+
+                        <ResponsiveContainer width="100%" height={280}>
+                            <BarChart data={owmHistory.monthly}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                                <XAxis dataKey="month" tickFormatter={v => `T${v}`} tick={{ fill: '#94a3b8' }} />
+                                <YAxis yAxisId="left" tick={{ fill: '#94a3b8' }} />
+                                <YAxis yAxisId="right" orientation="right" tick={{ fill: '#f59e0b' }} />
+                                <Tooltip contentStyle={{ backgroundColor: '#1e293b', borderColor: '#475569', borderRadius: 8 }} />
+                                <Legend />
+                                <Bar yAxisId="left" dataKey="avg_aqi" name="AQI Ước tính" fill="#3b82f6" radius={[4,4,0,0]} />
+                                <Bar yAxisId="right" dataKey="avg_pm25" name="PM2.5 (µg/m³)" fill="#f59e0b" radius={[4,4,0,0]} />
+                            </BarChart>
+                        </ResponsiveContainer>
+
+                        {owmHistory.monthly.every((m:any) => m.avg_aqi === null) && (
+                            <div className="mt-4 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-xl flex gap-3 text-yellow-200 text-sm">
+                                <AlertCircle size={20} className="shrink-0" />
+                                <p>Chưa có dữ liệu từ OpenWeatherMap. Nguyên nhân có thể do API Key chưa kích hoạt gói History, hoặc chưa cấu hình đúng `VITE_OWM_API_KEY` trong file `.env`.</p>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* AQI Distribution Pie & Current Ranking */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                    {/* AQI Distribution Pie */}
                     <div className="bg-slate-800 rounded-2xl p-6 border border-slate-700">
                         <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                            <PieChart size={18} className="text-purple-400" /> Phân bố mức AQI
+                            <PieChart size={18} className="text-purple-400" /> Phân bố mức AQI ({days} ngày)
                         </h3>
                         {pieData.length > 0 ? (
                             <ResponsiveContainer width="100%" height={280}>
                                 <RechartPie>
                                     <Pie data={pieData} cx="50%" cy="50%" outerRadius={100} dataKey="value" label={({ name, value }) => `${name}: ${value}%`}>
-                                        {pieData.map((entry: any, i: number) => (
-                                            <Cell key={i} fill={entry.color} />
-                                        ))}
+                                        {pieData.map((entry: any, i: number) => <Cell key={i} fill={entry.color} />)}
                                     </Pie>
                                     <Tooltip formatter={(v: number) => `${v}%`} />
                                 </RechartPie>
@@ -186,66 +292,17 @@ const Statistics: React.FC<StatisticsProps> = ({ data }) => {
                         )}
                     </div>
 
-                    {/* Monthly trend */}
-                    <div className="bg-slate-800 rounded-2xl p-6 border border-slate-700">
-                        <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                            <TrendingUp size={18} className="text-cyan-400" /> Xu hướng AQI theo tháng
-                        </h3>
-                        {monthly.length > 0 ? (
-                            <ResponsiveContainer width="100%" height={280}>
-                                <LineChart data={[...monthly].reverse()}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                                    <XAxis dataKey="month" tick={{ fill: '#94a3b8', fontSize: 12 }} />
-                                    <YAxis tick={{ fill: '#94a3b8', fontSize: 12 }} />
-                                    <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569', borderRadius: 8 }} />
-                                    <Legend />
-                                    <Line type="monotone" dataKey="avg_aqi" stroke="#3b82f6" strokeWidth={2} name="AQI TB" dot={{ r: 4 }} />
-                                    <Line type="monotone" dataKey="avg_pm25" stroke="#f59e0b" strokeWidth={2} name="PM2.5 TB" dot={{ r: 4 }} />
-                                </LineChart>
-                            </ResponsiveContainer>
-                        ) : (
-                            <p className="text-slate-500 text-center py-10">Không có dữ liệu</p>
-                        )}
-                    </div>
-                </div>
-
-                {/* Ranking Tables */}
-                {ranking && (
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                    {ranking?.most_polluted && (
                         <RankingTable title="🔴 Top 5 Quận Ô Nhiễm Nhất" data={ranking.most_polluted} colorScheme="red" />
-                        <RankingTable title="🟢 Top 5 Quận Sạch Nhất" data={ranking.cleanest} colorScheme="green" />
-                    </div>
-                )}
-
-                {/* Full ranking bar chart */}
-                {ranking?.all_districts && (
-                    <div className="bg-slate-800 rounded-2xl p-6 border border-slate-700 mb-8">
-                        <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                            <BarChart3 size={18} className="text-blue-400" /> AQI Trung bình theo Quận ({days} ngày)
-                        </h3>
-                        <ResponsiveContainer width="100%" height={400}>
-                            <BarChart data={ranking.all_districts} layout="vertical" margin={{ left: 80 }}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                                <XAxis type="number" tick={{ fill: '#94a3b8', fontSize: 11 }} />
-                                <YAxis dataKey="district" type="category" tick={{ fill: '#94a3b8', fontSize: 11 }} width={90} />
-                                <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569', borderRadius: 8 }} />
-                                <Bar dataKey="avg_aqi" name="AQI TB" radius={[0, 4, 4, 0]}>
-                                    {ranking.all_districts.map((entry: any, i: number) => (
-                                        <Cell key={i} fill={AQI_COLORS[entry.dominant_level] || '#64748b'} />
-                                    ))}
-                                </Bar>
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </div>
-                )}
+                    )}
+                </div>
             </div>
         </div>
     );
 };
 
 // --- Sub-components ---
-
-function KPICard({ icon, label, value, color, sub }: { icon: React.ReactNode; label: string; value: any; color: string; sub?: string }) {
+function KPICard({ icon, label, value, color }: { icon: React.ReactNode; label: string; value: any; color: string }) {
     const colors: Record<string, string> = {
         blue: 'from-blue-600/20 to-cyan-600/10 border-blue-500/30 text-blue-400',
         orange: 'from-orange-600/20 to-yellow-600/10 border-orange-500/30 text-orange-400',
@@ -256,7 +313,6 @@ function KPICard({ icon, label, value, color, sub }: { icon: React.ReactNode; la
         <div className={`bg-gradient-to-br ${colors[color]} border rounded-2xl p-5 relative overflow-hidden`}>
             <div className="flex items-center gap-2 mb-2 text-slate-400 text-sm">{icon} {label}</div>
             <p className="text-2xl font-bold text-white">{value}</p>
-            {sub && <p className="text-xs text-slate-500 mt-1">{sub}</p>}
         </div>
     );
 }
@@ -264,16 +320,16 @@ function KPICard({ icon, label, value, color, sub }: { icon: React.ReactNode; la
 function RankingTable({ title, data, colorScheme }: { title: string; data: any[]; colorScheme: 'red' | 'green' }) {
     const borderColor = colorScheme === 'red' ? 'border-red-500/30' : 'border-emerald-500/30';
     return (
-        <div className={`bg-slate-800 rounded-2xl p-6 border ${borderColor}`}>
+        <div className={`bg-slate-800 rounded-2xl p-6 border ${borderColor} flex flex-col`}>
             <h3 className="text-lg font-bold text-white mb-4">{title}</h3>
-            <div className="space-y-3">
+            <div className="space-y-3 flex-1 overflow-y-auto pr-2">
                 {data.map((d: any, i: number) => (
                     <div key={i} className="flex items-center justify-between bg-slate-900/50 p-3 rounded-xl">
                         <div className="flex items-center gap-3">
                             <span className="w-7 h-7 rounded-full bg-slate-700 flex items-center justify-center text-xs font-bold text-white">{i + 1}</span>
                             <div>
                                 <p className="text-white font-medium text-sm">{d.district}</p>
-                                <p className="text-xs text-slate-500">PM2.5: {d.avg_pm25} µg/m³</p>
+                                <p className="text-xs text-slate-500">PM2.5: {d.avg_pm25}</p>
                             </div>
                         </div>
                         <div className="text-right">

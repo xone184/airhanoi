@@ -3,11 +3,13 @@
  * Statistics API
  * Aggregate air quality data for charts and export
  *
- * GET  /api/statistics.php                         - Tổng quan thống kê
- * GET  /api/statistics.php?type=weekly             - Thống kê theo tuần
- * GET  /api/statistics.php?type=monthly            - Thống kê theo tháng
- * GET  /api/statistics.php?type=ranking            - Xếp hạng quận
- * GET  /api/statistics.php?type=trends&district_id=1  - Xu hướng theo quận
+ * GET  /api/statistics.php                              - Tổng quan thống kê
+ * GET  /api/statistics.php?type=weekly                  - Thống kê theo tuần
+ * GET  /api/statistics.php?type=monthly                 - Thống kê theo tháng
+ * GET  /api/statistics.php?type=ranking                 - Xếp hạng quận
+ * GET  /api/statistics.php?type=trends&district_id=1    - Xu hướng theo quận
+ * GET  /api/statistics.php?type=yearly_compare          - So sánh AQI từng tháng qua các năm (DB)
+ * GET  /api/statistics.php?type=owm_history&year=2023   - Lịch sử AQI từ OpenWeatherMap
  */
 
 require_once '../config/config.php';
@@ -44,6 +46,12 @@ switch ($type) {
         break;
     case 'trends':
         handleTrends($db, $districtId, $days);
+        break;
+    case 'yearly_compare':
+        handleYearlyCompare($db);
+        break;
+    case 'owm_history':
+        handleOwmHistory();
         break;
     default:
         sendError('Invalid type', 400);
@@ -202,5 +210,192 @@ function handleTrends($db, $districtId, $days) {
     $stmt->execute([$districtId, $days]);
 
     sendSuccess($stmt->fetchAll());
+}
+
+/**
+ * So sánh AQI trung bình theo tháng qua từng năm trong DB hệ thống
+ */
+function handleYearlyCompare($db) {
+    $stmt = $db->query("
+        SELECT
+            YEAR(datetime)  AS year,
+            MONTH(datetime) AS month_num,
+            DATE_FORMAT(datetime, '%m') AS month_label,
+            ROUND(AVG(aqi), 1)   AS avg_aqi,
+            ROUND(AVG(pm25), 1)  AS avg_pm25,
+            ROUND(MAX(aqi), 0)   AS max_aqi,
+            ROUND(MIN(aqi), 0)   AS min_aqi,
+            COUNT(*)             AS total_records
+        FROM fact_air_quality
+        GROUP BY YEAR(datetime), MONTH(datetime)
+        ORDER BY YEAR(datetime) ASC, MONTH(datetime) ASC
+    ");
+    $rows = $stmt->fetchAll();
+
+    // Group by year
+    $byYear = [];
+    $years  = [];
+    foreach ($rows as $r) {
+        $y = (int)$r['year'];
+        if (!isset($byYear[$y])) {
+            $byYear[$y] = [];
+            $years[] = $y;
+        }
+        $byYear[$y][] = [
+            'month'         => (int)$r['month_num'],
+            'month_label'   => $r['month_label'],
+            'avg_aqi'       => (float)$r['avg_aqi'],
+            'avg_pm25'      => (float)$r['avg_pm25'],
+            'max_aqi'       => (float)$r['max_aqi'],
+            'min_aqi'       => (float)$r['min_aqi'],
+            'total_records' => (int)$r['total_records'],
+        ];
+    }
+
+    // Build pivot: each row = one month (1-12), columns = years
+    $pivot = [];
+    for ($m = 1; $m <= 12; $m++) {
+        $entry = ['month' => str_pad($m, 2, '0', STR_PAD_LEFT)];
+        foreach ($years as $y) {
+            $found = null;
+            foreach ($byYear[$y] as $d) {
+                if ($d['month'] === $m) { $found = $d; break; }
+            }
+            $entry["{$y}_avg_aqi"]  = $found ? $found['avg_aqi']  : null;
+            $entry["{$y}_avg_pm25"] = $found ? $found['avg_pm25'] : null;
+            $entry["{$y}_max_aqi"]  = $found ? $found['max_aqi']  : null;
+        }
+        $pivot[] = $entry;
+    }
+
+    // Year-level summary (avg of avgs)
+    $summaries = [];
+    foreach ($years as $y) {
+        $aqiVals  = array_column($byYear[$y], 'avg_aqi');
+        $pm25Vals = array_column($byYear[$y], 'avg_pm25');
+        $summaries[$y] = [
+            'year'       => $y,
+            'avg_aqi'    => $aqiVals  ? round(array_sum($aqiVals)  / count($aqiVals),  1) : null,
+            'avg_pm25'   => $pm25Vals ? round(array_sum($pm25Vals) / count($pm25Vals), 1) : null,
+            'max_aqi'    => $aqiVals  ? max(array_column($byYear[$y], 'max_aqi'))  : null,
+            'min_aqi'    => $aqiVals  ? min(array_column($byYear[$y], 'min_aqi'))  : null,
+            'months_data'=> count($byYear[$y]),
+        ];
+    }
+
+    sendSuccess([
+        'years'     => $years,
+        'by_year'   => $byYear,
+        'pivot'     => $pivot,
+        'summaries' => array_values($summaries),
+    ]);
+}
+
+/**
+ * Proxy lấy lịch sử Air Pollution từ OpenWeatherMap cho Hà Nội
+ * Params: year (int, default = current year - 1)
+ * OWM Air Pollution History API: https://api.openweathermap.org/data/2.5/air_pollution/history
+ * Lưu ý: chỉ hỗ trợ từ ngày 27/11/2020 trở đi
+ */
+function handleOwmHistory() {
+    $owmKey = defined('OWM_API_KEY') ? OWM_API_KEY : (getenv('OWM_API_KEY') ?: '');
+    // Fallback: đọc từ file .env nếu không có constant
+    if (!$owmKey) {
+        $envFile = __DIR__ . '/../../.env';
+        if (file_exists($envFile)) {
+            $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+            foreach ($lines as $line) {
+                if (strpos($line, 'VITE_OWM_API_KEY=') === 0) {
+                    $owmKey = trim(substr($line, strlen('VITE_OWM_API_KEY=')));
+                    break;
+                }
+                if (strpos($line, 'OWM_API_KEY=') === 0) {
+                    $owmKey = trim(substr($line, strlen('OWM_API_KEY=')));
+                    break;
+                }
+            }
+        }
+    }
+
+    if (!$owmKey) {
+        sendError('OWM_API_KEY chưa được cấu hình. Thêm VITE_OWM_API_KEY vào .env', 500);
+        return;
+    }
+
+    $year = isset($_GET['year']) ? (int)$_GET['year'] : (date('Y') - 1);
+    // Giới hạn: OWM chỉ có data từ 2020-11-27
+    $year = max(2020, min((int)date('Y'), $year));
+
+    // Hà Nội tọa độ trung tâm
+    $lat  = 21.0285;
+    $lon  = 105.8542;
+
+    // Lấy từng tháng: start = đầu tháng, end = cuối tháng (Unix timestamp)
+    $monthly = [];
+    for ($m = 1; $m <= 12; $m++) {
+        $start = mktime(0, 0, 0, $m, 1, $year);
+        $end   = mktime(23, 59, 59, $m, date('t', $start), $year);
+
+        // Nếu tháng trong tương lai thì bỏ qua
+        if ($start > time()) continue;
+
+        $url = "https://api.openweathermap.org/data/2.5/air_pollution/history";
+        $url .= "?lat={$lat}&lon={$lon}&start={$start}&end={$end}&appid={$owmKey}";
+
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        $resp = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode !== 200 || !$resp) continue;
+
+        $json = json_decode($resp, true);
+        if (!isset($json['list']) || empty($json['list'])) continue;
+
+        // Tính trung bình các chỉ số trong tháng
+        $aqiVals  = array_column($json['list'], 'main');
+        $aqiNums  = array_map(fn($x) => $x['aqi'] ?? null, $aqiVals);
+        $aqiNums  = array_filter($aqiNums, fn($v) => $v !== null);
+
+        $components = [];
+        foreach ($json['list'] as $item) {
+            foreach ($item['components'] as $k => $v) {
+                $components[$k][] = $v;
+            }
+        }
+
+        // OWM AQI: 1=Good,2=Fair,3=Moderate,4=Poor,5=VeryPoor  → scale to 0-500
+        $aqiAvgRaw = count($aqiNums) ? array_sum($aqiNums) / count($aqiNums) : null;
+        // Chuyển sang thang AQI US tương đương thô
+        $aqiScaled = $aqiAvgRaw ? round($aqiAvgRaw * 50, 1) : null;
+
+        $monthly[] = [
+            'month'       => str_pad($m, 2, '0', STR_PAD_LEFT),
+            'year'        => $year,
+            'owm_aqi_raw' => $aqiAvgRaw ? round($aqiAvgRaw, 2) : null,
+            'avg_aqi'     => $aqiScaled,
+            'avg_pm25'    => isset($components['pm2_5'])
+                ? round(array_sum($components['pm2_5']) / count($components['pm2_5']), 1)
+                : null,
+            'avg_pm10'    => isset($components['pm10'])
+                ? round(array_sum($components['pm10'])  / count($components['pm10']),  1)
+                : null,
+            'avg_no2'     => isset($components['no2'])
+                ? round(array_sum($components['no2'])   / count($components['no2']),   1)
+                : null,
+            'data_points' => count($json['list']),
+            'source'      => 'OpenWeatherMap',
+        ];
+    }
+
+    sendSuccess([
+        'year'    => $year,
+        'lat'     => $lat,
+        'lon'     => $lon,
+        'monthly' => $monthly,
+    ]);
 }
 ?>
