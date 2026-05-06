@@ -258,21 +258,25 @@ const Statistics: React.FC<StatisticsProps> = ({ data }) => {
                     </div>
                 )}
 
-                {/* Bảng Dữ Liệu Chi Tiết */}
+                {/* Xu hướng biến động AQI */}
                 <div className="bg-slate-800 rounded-2xl p-6 border border-slate-700 mb-8">
-                    <div className="flex items-center justify-between mb-6">
-                        <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                            <Table2 className="text-emerald-400" size={20} /> Bảng Tổng Hợp Dữ Liệu
-                        </h3>
-                        <div className="flex gap-2">
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-6 gap-4">
+                        <div>
+                            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                                <History className="text-blue-400" size={20} /> 
+                                So sánh xu hướng AQI theo thời gian
+                            </h3>
+                            <p className="text-slate-400 text-sm mt-1">Biểu đồ và bảng dữ liệu thể hiện mức độ ô nhiễm theo từng khoảng thời gian lựa chọn.</p>
+                        </div>
+                        <div className="flex gap-2 bg-slate-900 p-1 rounded-lg border border-slate-700">
                             {(['hour', 'day', 'month', 'year'] as const).map(m => (
                                 <button 
                                     key={m} 
                                     onClick={() => setTableMode(m)}
-                                    className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${
+                                    className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${
                                         tableMode === m 
-                                        ? 'bg-emerald-600 border-emerald-500 text-white' 
-                                        : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-slate-200'
+                                        ? 'bg-blue-600 text-white shadow-lg' 
+                                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
                                     }`}
                                 >
                                     Theo {m === 'hour' ? 'Giờ' : m === 'day' ? 'Ngày' : m === 'month' ? 'Tháng' : 'Năm'}
@@ -280,17 +284,80 @@ const Statistics: React.FC<StatisticsProps> = ({ data }) => {
                             ))}
                         </div>
                     </div>
-                    
-                    <div className="overflow-x-auto">
+
+                    {/* Chart Area */}
+                    <div className="mb-8">
+                        {tableMode === 'month' ? (
+                            <ResponsiveContainer width="100%" height={380}>
+                                <LineChart data={yearlyCompare?.pivot || []} margin={{ top: 10, right: 30, left: 0, bottom: 10 }}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                                    <XAxis dataKey="month" tickFormatter={(val) => `Tháng ${val}`} tick={{ fill: '#94a3b8' }} />
+                                    <YAxis tick={{ fill: '#94a3b8' }} />
+                                    <Tooltip contentStyle={{ backgroundColor: '#1e293b', borderColor: '#475569', borderRadius: 8 }} />
+                                    <Legend wrapperStyle={{ paddingTop: 20 }} />
+                                    <ReferenceLine y={100} stroke="#f59e0b" strokeDasharray="5 5" label={{ value: 'Kém (100)', fill: '#f59e0b' }} />
+                                    <ReferenceLine y={150} stroke="#ef4444" strokeDasharray="5 5" label={{ value: 'Xấu (150)', fill: '#ef4444' }} />
+                                    
+                                    {yearlyCompare?.years?.map((year: number, i: number) => {
+                                        const colors = ['#94a3b8', '#3b82f6', '#f59e0b', '#10b981', '#ec4899'];
+                                        const isCurrentYear = year === new Date().getFullYear();
+                                        return (
+                                            <Line 
+                                                key={year}
+                                                type="monotone" 
+                                                dataKey={`${year}_avg_aqi`} 
+                                                name={`Năm ${year}`} 
+                                                stroke={isCurrentYear ? '#3b82f6' : colors[i % colors.length]} 
+                                                strokeWidth={isCurrentYear ? 3 : 2}
+                                                dot={{ r: 4 }} activeDot={{ r: 7 }}
+                                            />
+                                        );
+                                    })}
+                                </LineChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <ResponsiveContainer width="100%" height={380}>
+                                <LineChart data={[...tableData].reverse()} margin={{ top: 10, right: 30, left: 0, bottom: 10 }}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                                    <XAxis dataKey="period" tick={{ fill: '#94a3b8' }} />
+                                    <YAxis tick={{ fill: '#94a3b8' }} />
+                                    <Tooltip contentStyle={{ backgroundColor: '#1e293b', borderColor: '#475569', borderRadius: 8 }} />
+                                    <Legend wrapperStyle={{ paddingTop: 20 }} />
+                                    <ReferenceLine y={100} stroke="#f59e0b" strokeDasharray="5 5" label={{ value: 'Kém (100)', fill: '#f59e0b' }} />
+                                    <ReferenceLine y={150} stroke="#ef4444" strokeDasharray="5 5" label={{ value: 'Xấu (150)', fill: '#ef4444' }} />
+                                    
+                                    <Line 
+                                        type="monotone" 
+                                        dataKey="avg_aqi" 
+                                        name="AQI Trung bình" 
+                                        stroke="#3b82f6" 
+                                        strokeWidth={3}
+                                        dot={{ r: 3 }} activeDot={{ r: 6 }}
+                                    />
+                                    <Line 
+                                        type="monotone" 
+                                        dataKey="avg_pm25" 
+                                        name="PM2.5 (µg/m³)" 
+                                        stroke="#f59e0b" 
+                                        strokeWidth={2}
+                                        dot={false}
+                                    />
+                                </LineChart>
+                            </ResponsiveContainer>
+                        )}
+                    </div>
+
+                    {/* Table Area */}
+                    <div className="overflow-x-auto border border-slate-700 rounded-xl">
                         <table className="w-full text-left text-sm text-slate-300 whitespace-nowrap">
-                            <thead className="bg-slate-900/80 text-slate-400 text-xs uppercase">
+                            <thead className="bg-slate-900/80 text-slate-400 text-xs uppercase border-b border-slate-700">
                                 <tr>
-                                    <th className="px-4 py-3 rounded-tl-lg">Thời Gian</th>
+                                    <th className="px-4 py-3">Thời Gian</th>
                                     <th className="px-4 py-3">AQI (TB)</th>
                                     <th className="px-4 py-3">PM2.5 (TB)</th>
                                     <th className="px-4 py-3">AQI Cao nhất</th>
                                     <th className="px-4 py-3">AQI Thấp nhất</th>
-                                    <th className="px-4 py-3 rounded-tr-lg text-right">Số Mẫu Đo</th>
+                                    <th className="px-4 py-3 text-right">Số Mẫu Đo</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-700">
@@ -314,45 +381,6 @@ const Statistics: React.FC<StatisticsProps> = ({ data }) => {
                         </table>
                     </div>
                 </div>
-
-                {/* So Sánh Theo Năm (DB System) */}
-                {yearlyCompare?.pivot && yearlyCompare.pivot.length > 0 && (
-                    <div className="bg-slate-800 rounded-2xl p-6 border border-slate-700 mb-8">
-                        <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
-                            <History className="text-blue-400" size={20} /> 
-                            So sánh xu hướng AQI theo tháng qua các năm (Dữ liệu trạm đo)
-                        </h3>
-                        <p className="text-slate-400 text-sm mb-6">Biểu đồ thể hiện mức độ ô nhiễm trung bình từng tháng trong năm nay so với các năm trước.</p>
-                        
-                        <ResponsiveContainer width="100%" height={380}>
-                            <LineChart data={yearlyCompare.pivot} margin={{ top: 10, right: 30, left: 0, bottom: 10 }}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                                <XAxis dataKey="month" tickFormatter={(val) => `Tháng ${val}`} tick={{ fill: '#94a3b8' }} />
-                                <YAxis tick={{ fill: '#94a3b8' }} />
-                                <Tooltip contentStyle={{ backgroundColor: '#1e293b', borderColor: '#475569', borderRadius: 8 }} />
-                                <Legend wrapperStyle={{ paddingTop: 20 }} />
-                                <ReferenceLine y={100} stroke="#f59e0b" strokeDasharray="5 5" label={{ value: 'Kém (100)', fill: '#f59e0b' }} />
-                                <ReferenceLine y={150} stroke="#ef4444" strokeDasharray="5 5" label={{ value: 'Xấu (150)', fill: '#ef4444' }} />
-                                
-                                {yearlyCompare.years.map((year: number, i: number) => {
-                                    const colors = ['#94a3b8', '#3b82f6', '#f59e0b', '#10b981', '#ec4899'];
-                                    const isCurrentYear = year === new Date().getFullYear();
-                                    return (
-                                        <Line 
-                                            key={year}
-                                            type="monotone" 
-                                            dataKey={`${year}_avg_aqi`} 
-                                            name={`Năm ${year}`} 
-                                            stroke={isCurrentYear ? '#3b82f6' : colors[i % colors.length]} 
-                                            strokeWidth={isCurrentYear ? 3 : 2}
-                                            dot={{ r: 4 }} activeDot={{ r: 7 }}
-                                        />
-                                    );
-                                })}
-                            </LineChart>
-                        </ResponsiveContainer>
-                    </div>
-                )}
 
                 {/* OpenWeatherMap History */}
                 {owmHistory?.monthly && owmHistory.monthly.length > 0 && (
