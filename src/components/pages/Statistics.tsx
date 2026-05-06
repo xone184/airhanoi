@@ -46,20 +46,59 @@ const Statistics: React.FC<StatisticsProps> = ({ data }) => {
         setLoading(true);
         setError(null);
         try {
-            const currentYear = new Date().getFullYear();
-            const lastYear = currentYear - 1;
-
-            const [ovRes, rankRes, yearlyRes, owmRes] = await Promise.all([
+            const [ovRes, rankRes, yearlyRes, owm2024Res, owm2025Res] = await Promise.all([
                 fetch(`${API_BASE}/data/statistics.php?type=overview&days=${days}`).then(r => r.json()),
                 fetch(`${API_BASE}/data/statistics.php?type=ranking&days=${days}`).then(r => r.json()),
                 fetch(`${API_BASE}/data/statistics.php?type=yearly_compare`).then(r => r.json()),
-                fetch(`${API_BASE}/data/statistics.php?type=owm_history&year=${lastYear}`).then(r => r.json()),
+                fetch(`${API_BASE}/data/statistics.php?type=owm_history&year=2024`).then(r => r.json()),
+                fetch(`${API_BASE}/data/statistics.php?type=owm_history&year=2025`).then(r => r.json()),
             ]);
+
+            if (yearlyRes.success) {
+                let pivot = yearlyRes.data.pivot || [];
+                let years = yearlyRes.data.years || [];
+                let summaries = yearlyRes.data.summaries || [];
+
+                const mergeOwmData = (owmResData: any, year: number) => {
+                    if (owmResData && owmResData.monthly && owmResData.monthly.length > 0) {
+                        if (!years.includes(year)) years.push(year);
+                        
+                        pivot = pivot.map((p: any) => {
+                            const mData = owmResData.monthly.find((m: any) => parseInt(m.month) === parseInt(p.month));
+                            if (mData && mData.avg_aqi !== null) {
+                                return { ...p, [`${year}_avg_aqi`]: mData.avg_aqi };
+                            }
+                            return p;
+                        });
+
+                        if (!summaries.find((s: any) => s.year === year)) {
+                            const validMonths = owmResData.monthly.filter((m: any) => m.avg_aqi !== null);
+                            if (validMonths.length > 0) {
+                                const sumAqi = validMonths.reduce((sum: number, m: any) => sum + m.avg_aqi, 0);
+                                summaries.push({
+                                    year,
+                                    avg_aqi: Math.round((sumAqi / validMonths.length) * 10) / 10,
+                                    months_data: validMonths.length,
+                                    source: 'OpenWeatherMap'
+                                });
+                            }
+                        }
+                    }
+                };
+
+                if (owm2024Res.success) mergeOwmData(owm2024Res.data, 2024);
+                if (owm2025Res.success) mergeOwmData(owm2025Res.data, 2025);
+
+                yearlyRes.data.pivot = pivot;
+                yearlyRes.data.years = years.sort();
+                yearlyRes.data.summaries = summaries.sort((a:any, b:any) => a.year - b.year);
+                
+                setYearlyCompare(yearlyRes.data);
+            }
 
             if (ovRes.success) setOverview(ovRes.data);
             if (rankRes.success) setRanking(rankRes.data);
-            if (yearlyRes.success) setYearlyCompare(yearlyRes.data);
-            if (owmRes.success) setOwmHistory(owmRes.data);
+            if (owm2025Res.success) setOwmHistory(owm2025Res.data);
         } catch (err: any) {
             setError(err.message || 'Không thể tải dữ liệu thống kê');
         } finally {
