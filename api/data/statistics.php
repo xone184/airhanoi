@@ -23,7 +23,10 @@ if ($method === 'OPTIONS') {
 }
 
 if ($method !== 'GET') {
-    sendError('Method not allowed', 405);
+    // Chỉ cho phép POST đối với ai_analysis
+    if (!($method === 'POST' && isset($_GET['type']) && $_GET['type'] === 'ai_analysis')) {
+        sendError('Method not allowed', 405);
+    }
 }
 
 $type = $_GET['type'] ?? 'overview';
