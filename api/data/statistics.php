@@ -459,7 +459,7 @@ function handleAiAnalysis() {
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
-        'model' => 'llama3-8b-8192',
+        'model' => 'llama-3.1-8b-instant',
         'messages' => [
             ['role' => 'user', 'content' => $prompt]
         ]
@@ -475,7 +475,7 @@ function handleAiAnalysis() {
     curl_close($ch);
 
     if ($httpCode !== 200 || !$response) {
-        sendError('Failed to get analysis from AI', 500);
+        sendError('Failed to get analysis from AI: HTTP ' . $httpCode . ' - ' . $response, 500);
     }
 
     $data = json_decode($response, true);
