@@ -38,7 +38,7 @@ const Statistics: React.FC<StatisticsProps> = ({ data }) => {
     
     // Compare Table state
     const [tableData, setTableData] = useState<any[]>([]);
-    const [tableMode, setTableMode] = useState<'day' | 'month' | 'year'>('month');
+    const [tableMode, setTableMode] = useState<'hour' | 'day' | 'month' | 'year'>('month');
 
     const reportRef = useRef<HTMLDivElement>(null);
 
@@ -265,7 +265,7 @@ const Statistics: React.FC<StatisticsProps> = ({ data }) => {
                             <Table2 className="text-emerald-400" size={20} /> Bảng Tổng Hợp Dữ Liệu
                         </h3>
                         <div className="flex gap-2">
-                            {(['day', 'month', 'year'] as const).map(m => (
+                            {(['hour', 'day', 'month', 'year'] as const).map(m => (
                                 <button 
                                     key={m} 
                                     onClick={() => setTableMode(m)}
@@ -275,7 +275,7 @@ const Statistics: React.FC<StatisticsProps> = ({ data }) => {
                                         : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-slate-200'
                                     }`}
                                 >
-                                    Theo {m === 'day' ? 'Ngày' : m === 'month' ? 'Tháng' : 'Năm'}
+                                    Theo {m === 'hour' ? 'Giờ' : m === 'day' ? 'Ngày' : m === 'month' ? 'Tháng' : 'Năm'}
                                 </button>
                             ))}
                         </div>
@@ -345,7 +345,6 @@ const Statistics: React.FC<StatisticsProps> = ({ data }) => {
                                             name={`Năm ${year}`} 
                                             stroke={isCurrentYear ? '#3b82f6' : colors[i % colors.length]} 
                                             strokeWidth={isCurrentYear ? 3 : 2}
-                                            strokeDasharray={isCurrentYear ? "" : "5 5"}
                                             dot={{ r: 4 }} activeDot={{ r: 7 }}
                                         />
                                     );

@@ -481,7 +481,7 @@ function handleAiAnalysis() {
  * Lấy dữ liệu cho Bảng so sánh (theo Ngày, Tháng, Năm)
  */
 function handleCompareTable($db) {
-    $mode = $_GET['mode'] ?? 'month'; // 'year', 'month', 'day'
+    $mode = $_GET['mode'] ?? 'month'; // 'year', 'month', 'day', 'hour'
     $days = isset($_GET['days']) ? (int)$_GET['days'] : 30;
 
     if ($mode === 'year') {
@@ -494,6 +494,11 @@ function handleCompareTable($db) {
         $selectDate = "DATE_FORMAT(datetime, '%Y-%m') as period";
         $where = "1=1"; 
         $limit = 24;
+    } elseif ($mode === 'hour') {
+        $groupBy = "DATE_FORMAT(datetime, '%Y-%m-%d %H:00')";
+        $selectDate = "DATE_FORMAT(datetime, '%Y-%m-%d %H:00') as period";
+        $where = "datetime >= DATE_SUB(NOW(), INTERVAL ? DAY)";
+        $limit = 240;
     } else {
         $groupBy = "DATE(datetime)";
         $selectDate = "DATE(datetime) as period";
@@ -512,14 +517,14 @@ function handleCompareTable($db) {
         FROM fact_air_quality
     ";
     
-    if ($mode === 'day') {
+    if ($mode === 'day' || $mode === 'hour') {
         $sql .= " WHERE $where ";
     }
     
     $sql .= " GROUP BY $groupBy ORDER BY period DESC LIMIT $limit";
 
     $stmt = $db->prepare($sql);
-    if ($mode === 'day') {
+    if ($mode === 'day' || $mode === 'hour') {
         $stmt->execute([$days]);
     } else {
         $stmt->execute();
