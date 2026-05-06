@@ -225,7 +225,6 @@ function handleYearlyCompare($db) {
         SELECT
             YEAR(datetime)  AS year,
             MONTH(datetime) AS month_num,
-            DATE_FORMAT(datetime, '%m') AS month_label,
             ROUND(AVG(aqi), 1)   AS avg_aqi,
             ROUND(AVG(pm25), 1)  AS avg_pm25,
             ROUND(MAX(aqi), 0)   AS max_aqi,
@@ -233,7 +232,7 @@ function handleYearlyCompare($db) {
             COUNT(*)             AS total_records
         FROM fact_air_quality
         GROUP BY YEAR(datetime), MONTH(datetime)
-        ORDER BY YEAR(datetime) ASC, MONTH(datetime) ASC
+        ORDER BY year ASC, month_num ASC
     ");
     $rows = $stmt->fetchAll();
 
@@ -248,7 +247,7 @@ function handleYearlyCompare($db) {
         }
         $byYear[$y][] = [
             'month'         => (int)$r['month_num'],
-            'month_label'   => $r['month_label'],
+            'month_label'   => str_pad($r['month_num'], 2, '0', STR_PAD_LEFT),
             'avg_aqi'       => (float)$r['avg_aqi'],
             'avg_pm25'      => (float)$r['avg_pm25'],
             'max_aqi'       => (float)$r['max_aqi'],
